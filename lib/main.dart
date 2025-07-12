@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';import 'Screen/User/Bottomnav.dart';
+import 'package:firebase_core/firebase_core.dart';
 
-import 'Screen/User/Home.dart';
-import 'Screen/User/setup.dart';
+import 'Screen/User/Bottomnav.dart';
+
+
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

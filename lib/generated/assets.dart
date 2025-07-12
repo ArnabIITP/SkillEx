@@ -8,6 +8,8 @@ class Assets {
   static const String userBottomnav = 'lib/Screen/User/Bottomnav.dart';
   static const String userHome = 'lib/Screen/User/Home.dart';
   static const String userLogin = 'lib/Screen/User/Login.dart';
+  static const String userProfile = 'lib/Screen/User/profile.dart';
+  static const String userSearch = 'lib/Screen/User/Search.dart';
   static const String userSetup = 'lib/Screen/User/setup.dart';
   static const String userSingup = 'lib/Screen/User/Singup.dart';
   static const String userSwipe = 'lib/Screen/User/swipe.dart';

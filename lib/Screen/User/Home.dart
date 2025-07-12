@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
+  @override
+  _HomePageState createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
   final List<String> categories = ['All', 'Design', 'Coding', 'Music', 'Marketing'];
+  int selectedCategoryIndex = 0;
+
   final List<Map<String, String>> userData = [
     {
       "name": "Aryan Singh",
@@ -26,32 +33,26 @@ class HomePage extends StatelessWidget {
     },
   ];
 
+  List<Map<String, String>> get filteredUsers {
+    if (selectedCategoryIndex == 0) return userData;
+    final selectedCategory = categories[selectedCategoryIndex].toLowerCase();
+    return userData.where((user) =>
+    user["skillsOffered"]!.toLowerCase().contains(selectedCategory) ||
+        user["skillsWanted"]!.toLowerCase().contains(selectedCategory)).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 40, 16, 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Welcome 👋',
               style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 16),
-
-            // Search Bar
-            TextField(
-              decoration: InputDecoration(
-                hintText: 'Search by skill (e.g., Photoshop)',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-              ),
             ),
             SizedBox(height: 16),
 
@@ -62,14 +63,20 @@ class HomePage extends StatelessWidget {
                 scrollDirection: Axis.horizontal,
                 itemCount: categories.length,
                 itemBuilder: (context, index) {
+                  final isSelected = index == selectedCategoryIndex;
                   return Padding(
                     padding: const EdgeInsets.only(right: 8),
-                    child: Chip(
+                    child: ChoiceChip(
                       label: Text(categories[index]),
-                      backgroundColor: index == 0 ? Colors.indigo : Colors.grey[300],
+                      selected: isSelected,
+                      selectedColor: Colors.indigo,
+                      backgroundColor: Colors.grey[300],
                       labelStyle: TextStyle(
-                        color: index == 0 ? Colors.white : Colors.black,
+                        color: isSelected ? Colors.white : Colors.black,
                       ),
+                      onSelected: (_) {
+                        setState(() => selectedCategoryIndex = index);
+                      },
                     ),
                   );
                 },
@@ -79,10 +86,12 @@ class HomePage extends StatelessWidget {
 
             // Skill Swap User Cards
             Expanded(
-              child: ListView.builder(
-                itemCount: userData.length,
+              child: filteredUsers.isEmpty
+                  ? Center(child: Text("No users found in this category."))
+                  : ListView.builder(
+                itemCount: filteredUsers.length,
                 itemBuilder: (context, index) {
-                  final user = userData[index];
+                  final user = filteredUsers[index];
                   return Card(
                     elevation: 4,
                     margin: const EdgeInsets.symmetric(vertical: 8),
