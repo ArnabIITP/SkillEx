@@ -35,6 +35,7 @@ dependencies:
   firebase_core: ^2.31.0
   firebase_auth: ^4.17.4
   cloud_firestore: ^4.13.4
+  curved_navigation_bar:
 
   # Image Picker
   image_picker: ^1.1.1

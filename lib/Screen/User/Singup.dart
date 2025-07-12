@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'Home.dart';
-// your home/dashboard page
 
 class SignupPage extends StatefulWidget {
   const SignupPage({super.key});
@@ -17,6 +16,7 @@ class _SignupPageState extends State<SignupPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   String name = '', email = '', password = '';
   bool isLoading = false;
+  bool showPassword = false;
 
   Future<void> signupUser() async {
     setState(() => isLoading = true);
@@ -41,7 +41,7 @@ class _SignupPageState extends State<SignupPage> {
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (_) => HomePage()),
-              (route) => false,
+          (route) => false,
         );
       }
     } on FirebaseAuthException catch (e) {
@@ -66,15 +66,25 @@ class _SignupPageState extends State<SignupPage> {
       backgroundColor: Colors.indigo[50],
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(28),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(Icons.person_add_alt_1, size: 80, color: Colors.indigo),
-              const SizedBox(height: 10),
+              CircleAvatar(
+                radius: 44,
+                backgroundColor: Colors.indigo[100],
+                child: Icon(Icons.person_add_alt_1, size: 60, color: Colors.indigo[700]),
+              ),
+              const SizedBox(height: 18),
               const Text(
                 "Create Account",
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "Join Skill Swap and start exchanging skills!",
+                style: TextStyle(fontSize: 16, color: Colors.indigo[400]),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 30),
@@ -88,7 +98,9 @@ class _SignupPageState extends State<SignupPage> {
                       decoration: InputDecoration(
                         prefixIcon: const Icon(Icons.person),
                         labelText: "Name",
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                        filled: true,
+                        fillColor: Colors.white,
                       ),
                       validator: (val) => val!.isEmpty ? "Enter your name" : null,
                       onChanged: (val) => name = val,
@@ -100,7 +112,9 @@ class _SignupPageState extends State<SignupPage> {
                       decoration: InputDecoration(
                         prefixIcon: const Icon(Icons.email),
                         labelText: "Email",
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                        filled: true,
+                        fillColor: Colors.white,
                       ),
                       validator: (val) => val!.isEmpty ? "Enter your email" : null,
                       onChanged: (val) => email = val,
@@ -109,14 +123,23 @@ class _SignupPageState extends State<SignupPage> {
 
                     // Password
                     TextFormField(
-                      obscureText: true,
+                      obscureText: !showPassword,
                       decoration: InputDecoration(
                         prefixIcon: const Icon(Icons.lock),
                         labelText: "Password",
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                        filled: true,
+                        fillColor: Colors.white,
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            showPassword ? Icons.visibility : Icons.visibility_off,
+                            color: Colors.indigo,
+                          ),
+                          onPressed: () => setState(() => showPassword = !showPassword),
+                        ),
                       ),
                       validator: (val) =>
-                      val!.length < 6 ? "Password must be at least 6 characters" : null,
+                          val!.length < 6 ? "Password must be at least 6 characters" : null,
                       onChanged: (val) => password = val,
                     ),
                     const SizedBox(height: 24),
@@ -127,9 +150,9 @@ class _SignupPageState extends State<SignupPage> {
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.indigo,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(14),
                           ),
                         ),
                         onPressed: () {
@@ -139,13 +162,43 @@ class _SignupPageState extends State<SignupPage> {
                         },
                         child: isLoading
                             ? const CircularProgressIndicator(color: Colors.white)
-                            : const Text("Sign Up", style: TextStyle(fontSize: 16,color: Colors.white)),
+                            : const Text("Sign Up", style: TextStyle(fontSize: 17, color: Colors.white)),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
+
+              Row(
+                children: [
+                  Expanded(child: Divider(thickness: 1, color: Colors.indigo[100])),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Text("or", style: TextStyle(color: Colors.indigo[300])),
+                  ),
+                  Expanded(child: Divider(thickness: 1, color: Colors.indigo[100])),
+                ],
+              ),
+              const SizedBox(height: 14),
+
+              // Social signup placeholder (optional)
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  side: BorderSide(color: Colors.indigo.shade200),
+                ),
+                icon: Icon(Icons.g_mobiledata, color: Colors.indigo),
+                label: Text("Sign up with Google", style: TextStyle(color: Colors.indigo[700])),
+                onPressed: () {
+                  // TODO: Implement Google sign-up
+                },
+              ),
+
+              const SizedBox(height: 22),
 
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -153,7 +206,7 @@ class _SignupPageState extends State<SignupPage> {
                   const Text("Already have an account? "),
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text("Login"),
+                    child: const Text("Login", style: TextStyle(fontWeight: FontWeight.bold)),
                   )
                 ],
               )

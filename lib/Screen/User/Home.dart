@@ -1,14 +1,7 @@
 import 'package:flutter/material.dart';
 
-class HomePage extends StatefulWidget {
-  @override
-  _HomePageState createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
+class HomePage extends StatelessWidget {
   final List<String> categories = ['All', 'Design', 'Coding', 'Music', 'Marketing'];
-  int selectedCategoryIndex = 0;
-
   final List<Map<String, String>> userData = [
     {
       "name": "Aryan Singh",
@@ -33,21 +26,12 @@ class _HomePageState extends State<HomePage> {
     },
   ];
 
-  List<Map<String, String>> get filteredUsers {
-    if (selectedCategoryIndex == 0) return userData;
-    final selectedCategory = categories[selectedCategoryIndex].toLowerCase();
-    return userData.where((user) =>
-    user["skillsOffered"]!.toLowerCase().contains(selectedCategory) ||
-        user["skillsWanted"]!.toLowerCase().contains(selectedCategory)
-    ).toList();
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       body: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 40, 16, 16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -78,20 +62,14 @@ class _HomePageState extends State<HomePage> {
                 scrollDirection: Axis.horizontal,
                 itemCount: categories.length,
                 itemBuilder: (context, index) {
-                  final isSelected = index == selectedCategoryIndex;
                   return Padding(
                     padding: const EdgeInsets.only(right: 8),
-                    child: ChoiceChip(
+                    child: Chip(
                       label: Text(categories[index]),
-                      selected: isSelected,
-                      selectedColor: Colors.indigo,
-                      backgroundColor: Colors.grey[300],
+                      backgroundColor: index == 0 ? Colors.indigo : Colors.grey[300],
                       labelStyle: TextStyle(
-                        color: isSelected ? Colors.white : Colors.black,
+                        color: index == 0 ? Colors.white : Colors.black,
                       ),
-                      onSelected: (_) {
-                        setState(() => selectedCategoryIndex = index);
-                      },
                     ),
                   );
                 },
@@ -101,12 +79,10 @@ class _HomePageState extends State<HomePage> {
 
             // Skill Swap User Cards
             Expanded(
-              child: filteredUsers.isEmpty
-                  ? Center(child: Text("No users found in this category."))
-                  : ListView.builder(
-                itemCount: filteredUsers.length,
+              child: ListView.builder(
+                itemCount: userData.length,
                 itemBuilder: (context, index) {
-                  final user = filteredUsers[index];
+                  final user = userData[index];
                   return Card(
                     elevation: 4,
                     margin: const EdgeInsets.symmetric(vertical: 8),

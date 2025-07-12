@@ -1,46 +1,62 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'Home.dart';
-import 'Singup.dart';
+// your home/dashboard page
 
-class LoginPage extends StatefulWidget {
+class SignupPage extends StatefulWidget {
+  const SignupPage({super.key});
+
   @override
-  _LoginPageState createState() => _LoginPageState();
+  State<SignupPage> createState() => _SignupPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _SignupPageState extends State<SignupPage> {
   final _formKey = GlobalKey<FormState>();
   final FirebaseAuth _auth = FirebaseAuth.instance;
-
-  String email = '';
-  String password = '';
+  String name = '', email = '', password = '';
   bool isLoading = false;
 
-  Future<void> loginUser() async {
+  Future<void> signupUser() async {
     setState(() => isLoading = true);
+
     try {
-      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
-        email: email.trim(),
+      UserCredential result = await _auth.createUserWithEmailAndPassword(
+        email: email,
         password: password,
       );
 
-      User? user = userCredential.user;
+      User? user = result.user;
 
       if (user != null) {
-        Navigator.pushReplacement(
+        // Save to Firestore
+        await FirebaseFirestore.instance.collection("users").doc(user.uid).set({
+          'name': name,
+          'email': email,
+          'createdAt': DateTime.now(),
+        });
+
+        // Navigate to main app
+        Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (_) => HomePage()),
+              (route) => false,
         );
       }
     } on FirebaseAuthException catch (e) {
-      String message = "Login failed. Please try again.";
-      if (e.code == 'user-not-found') message = "No user found for that email.";
-      if (e.code == 'wrong-password') message = "Wrong password.";
+      String message = "Signup failed.";
+      if (e.code == 'email-already-in-use') {
+        message = "This email is already in use.";
+      } else if (e.code == 'weak-password') {
+        message = "Password is too weak.";
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
     }
+
     setState(() => isLoading = false);
   }
 
@@ -54,10 +70,10 @@ class _LoginPageState extends State<LoginPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Icon(Icons.login, size: 80, color: Colors.indigo),
+              const Icon(Icons.person_add_alt_1, size: 80, color: Colors.indigo),
               const SizedBox(height: 10),
               const Text(
-                "Welcome Back!",
+                "Create Account",
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
@@ -67,16 +83,26 @@ class _LoginPageState extends State<LoginPage> {
                 key: _formKey,
                 child: Column(
                   children: [
+                    // Name
+                    TextFormField(
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.person),
+                        labelText: "Name",
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      validator: (val) => val!.isEmpty ? "Enter your name" : null,
+                      onChanged: (val) => name = val,
+                    ),
+                    const SizedBox(height: 16),
+
                     // Email
                     TextFormField(
                       decoration: InputDecoration(
                         prefixIcon: const Icon(Icons.email),
                         labelText: "Email",
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      validator: (val) => val!.isEmpty ? "Enter email" : null,
+                      validator: (val) => val!.isEmpty ? "Enter your email" : null,
                       onChanged: (val) => email = val,
                     ),
                     const SizedBox(height: 16),
@@ -87,53 +113,47 @@ class _LoginPageState extends State<LoginPage> {
                       decoration: InputDecoration(
                         prefixIcon: const Icon(Icons.lock),
                         labelText: "Password",
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      validator: (val) => val!.isEmpty ? "Enter password" : null,
+                      validator: (val) =>
+                      val!.length < 6 ? "Password must be at least 6 characters" : null,
                       onChanged: (val) => password = val,
                     ),
                     const SizedBox(height: 24),
 
-                    isLoading
-                        ? const CircularProgressIndicator()
-                        : SizedBox(
+                    // Signup Button
+                    SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.indigo,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          backgroundColor: Colors.indigo,
                         ),
                         onPressed: () {
                           if (_formKey.currentState!.validate()) {
-                            loginUser();
+                            signupUser();
                           }
                         },
-                        child: const Text("Login", style: TextStyle(fontSize: 16,color: Colors.white)),
+                        child: isLoading
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : const Text("Sign Up", style: TextStyle(fontSize: 16,color: Colors.white)),
                       ),
                     ),
                   ],
                 ),
               ),
-
               const SizedBox(height: 16),
 
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text("Don't have an account? "),
+                  const Text("Already have an account? "),
                   TextButton(
-                    onPressed: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (_) => SignupPage()),
-                      );
-                    },
-                    child: const Text("Sign Up"),
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text("Login"),
                   )
                 ],
               )
