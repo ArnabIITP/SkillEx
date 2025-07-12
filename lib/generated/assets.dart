@@ -9,9 +9,9 @@ class Assets {
   static const String userHome = 'lib/Screen/User/Home.dart';
   static const String userLogin = 'lib/Screen/User/Login.dart';
   static const String userProfile = 'lib/Screen/User/profile.dart';
-  static const String userSearch = 'lib/Screen/User/Search.dart';
+  static const String userSearch = 'lib/Screen/User/Request.dart';
   static const String userSetup = 'lib/Screen/User/setup.dart';
   static const String userSingup = 'lib/Screen/User/Signup.dart';
-  static const String userSwipe = 'lib/Screen/User/swipe.dart';
+  static const String userSwipe = 'lib/Screen/User/Swap.dart';
 
 }
