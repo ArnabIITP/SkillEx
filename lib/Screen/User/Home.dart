@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
+  @override
+  _HomePageState createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
   final List<String> categories = ['All', 'Design', 'Coding', 'Music', 'Marketing'];
+  int selectedCategoryIndex = 0;
+
   final List<Map<String, String>> userData = [
     {
       "name": "Aryan Singh",
@@ -26,23 +33,29 @@ class HomePage extends StatelessWidget {
     },
   ];
 
+  List<Map<String, String>> get filteredUsers {
+    if (selectedCategoryIndex == 0) return userData;
+    final selectedCategory = categories[selectedCategoryIndex].toLowerCase();
+    return userData.where((user) =>
+    user["skillsOffered"]!.toLowerCase().contains(selectedCategory) ||
+        user["skillsWanted"]!.toLowerCase().contains(selectedCategory)
+    ).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Skill Swap'),
-        centerTitle: true,
-      ),
+      backgroundColor: Colors.grey[50],
       body: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.fromLTRB(16, 40, 16, 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'Welcome 👋',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 12),
+            SizedBox(height: 16),
 
             // Search Bar
             TextField(
@@ -50,13 +63,13 @@ class HomePage extends StatelessWidget {
                 hintText: 'Search by skill (e.g., Photoshop)',
                 prefixIcon: Icon(Icons.search),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 filled: true,
-                fillColor: Colors.grey[200],
+                fillColor: Colors.white,
               ),
             ),
-            SizedBox(height: 12),
+            SizedBox(height: 16),
 
             // Categories
             SizedBox(
@@ -65,60 +78,63 @@ class HomePage extends StatelessWidget {
                 scrollDirection: Axis.horizontal,
                 itemCount: categories.length,
                 itemBuilder: (context, index) {
+                  final isSelected = index == selectedCategoryIndex;
                   return Padding(
                     padding: const EdgeInsets.only(right: 8),
-                    child: Chip(
+                    child: ChoiceChip(
                       label: Text(categories[index]),
-                      backgroundColor: index == 0 ? Colors.indigo : Colors.grey[300],
+                      selected: isSelected,
+                      selectedColor: Colors.indigo,
+                      backgroundColor: Colors.grey[300],
                       labelStyle: TextStyle(
-                        color: index == 0 ? Colors.white : Colors.black,
+                        color: isSelected ? Colors.white : Colors.black,
                       ),
+                      onSelected: (_) {
+                        setState(() => selectedCategoryIndex = index);
+                      },
                     ),
                   );
                 },
               ),
             ),
-            SizedBox(height: 12),
+            SizedBox(height: 16),
 
             // Skill Swap User Cards
             Expanded(
-              child: ListView.builder(
-                itemCount: userData.length,
+              child: filteredUsers.isEmpty
+                  ? Center(child: Text("No users found in this category."))
+                  : ListView.builder(
+                itemCount: filteredUsers.length,
                 itemBuilder: (context, index) {
-                  final user = userData[index];
+                  final user = filteredUsers[index];
                   return Card(
-                    elevation: 3,
+                    elevation: 4,
+                    margin: const EdgeInsets.symmetric(vertical: 8),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    margin: const EdgeInsets.only(bottom: 16),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 30,
-                            backgroundImage: NetworkImage(user["photoUrl"]!),
-                          ),
-                          SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  user["name"]!,
-                                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                                ),
-                                SizedBox(height: 6),
-                                Text("🛠️ Offers: ${user["skillsOffered"]}"),
-                                Text("🎯 Wants: ${user["skillsWanted"]}"),
-                                Text("⏰ ${user["availability"]}"),
-                              ],
-                            ),
-                          ),
-                          Icon(Icons.arrow_forward_ios, size: 16),
-                        ],
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.all(16),
+                      leading: CircleAvatar(
+                        radius: 30,
+                        backgroundImage: NetworkImage(user["photoUrl"]!),
                       ),
+                      title: Text(
+                        user["name"]!,
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                      ),
+                      subtitle: Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("🛠️ Offers: ${user["skillsOffered"]}"),
+                            Text("🎯 Wants: ${user["skillsWanted"]}"),
+                            Text("⏰ ${user["availability"]}"),
+                          ],
+                        ),
+                      ),
+                      trailing: Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
                     ),
                   );
                 },

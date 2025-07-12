@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'Home.dart';
 
 class ProfileSetupPage extends StatefulWidget {
   const ProfileSetupPage({super.key});
@@ -14,62 +15,33 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  final TextEditingController offeredController = TextEditingController();
+  final TextEditingController wantedController = TextEditingController();
+
   String name = '';
   String bio = '';
-  String newOfferedSkill = '';
-  String newWantedSkill = '';
 
-  List<Map<String, dynamic>> skillsOffered = [];
-  List<Map<String, dynamic>> skillsWanted = [];
+  List<String> skillsOffered = [];
+  List<String> skillsWanted = [];
 
   bool isSaving = false;
-
-  Future<int> _getOrCreateSkill(String skillName) async {
-    skillName = skillName.trim();
-
-    final existing = await _firestore
-        .collection('skills')
-        .where('name', isEqualTo: skillName)
-        .get();
-
-    if (existing.docs.isNotEmpty) {
-      return existing.docs.first['id'];
-    }
-
-    final allSkills = await _firestore
-        .collection('skills')
-        .orderBy('id', descending: true)
-        .limit(1)
-        .get();
-
-    final newId = allSkills.docs.isEmpty ? 1 : allSkills.docs.first['id'] + 1;
-
-    await _firestore.collection('skills').add({
-      'id': newId,
-      'name': skillName,
-    });
-
-    return newId;
-  }
 
   Future<void> addSkill(String skillName, bool offered) async {
     if (skillName.trim().isEmpty) return;
 
-    final id = await _getOrCreateSkill(skillName);
+    final skill = skillName.trim();
 
     setState(() {
-      final skillMap = {'id': id, 'name': skillName.trim()};
-
       if (offered) {
-        if (!skillsOffered.any((s) => s['id'] == id)) {
-          skillsOffered.add(skillMap);
+        if (!skillsOffered.contains(skill)) {
+          skillsOffered.add(skill);
         }
-        newOfferedSkill = '';
+        offeredController.clear();
       } else {
-        if (!skillsWanted.any((s) => s['id'] == id)) {
-          skillsWanted.add(skillMap);
+        if (!skillsWanted.contains(skill)) {
+          skillsWanted.add(skill);
         }
-        newWantedSkill = '';
+        wantedController.clear();
       }
     });
   }
@@ -85,15 +57,15 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
         await _firestore.collection("users").doc(user.uid).set({
           'name': name,
           'bio': bio,
-          'skillsOffered': skillsOffered.map((s) => s['id']).toList(),
-          'skillsWanted': skillsWanted.map((s) => s['id']).toList(),
+          'skillsOffered': skillsOffered,
+          'skillsWanted': skillsWanted,
           'updatedAt': DateTime.now(),
         });
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Profile saved successfully!")),
         );
-        Navigator.pop(context);
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomePage()));
       }
     } catch (e) {
       print("Error saving profile: $e");
@@ -105,55 +77,61 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
     setState(() => isSaving = false);
   }
 
-  void removeSkill(bool offered, int id) {
+  void removeSkill(bool offered, String skillName) {
     setState(() {
       if (offered) {
-        skillsOffered.removeWhere((s) => s['id'] == id);
+        skillsOffered.remove(skillName);
       } else {
-        skillsWanted.removeWhere((s) => s['id'] == id);
+        skillsWanted.remove(skillName);
       }
     });
   }
 
   Widget skillInput({
     required String label,
-    required String value,
-    required Function(String) onChanged,
+    required TextEditingController controller,
     required VoidCallback onAdd,
   }) {
     return Row(
       children: [
         Expanded(
           child: TextFormField(
+            controller: controller,
             decoration: InputDecoration(
               labelText: label,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               filled: true,
-              fillColor: Colors.white,
+              fillColor: Colors.grey[100],
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             ),
-            onChanged: onChanged,
           ),
         ),
         const SizedBox(width: 10),
-        ElevatedButton(
+        ElevatedButton.icon(
           onPressed: onAdd,
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.indigo),
-          child: const Text("Add"),
+          icon: const Icon(Icons.add, color: Colors.white),
+          label: const Text("Add", style: TextStyle(color: Colors.white)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.indigo,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
         ),
       ],
     );
   }
 
-  Widget skillChips(List<Map<String, dynamic>> skillList, bool offered) {
+  Widget skillChips(List<String> skillList, bool offered) {
     return Wrap(
       spacing: 8,
       children: skillList.map((skill) {
         return Chip(
-          label: Text(skill['name']),
+          label: Text(skill),
           labelStyle: const TextStyle(color: Colors.white),
           backgroundColor: Colors.indigo,
           deleteIcon: const Icon(Icons.close, color: Colors.white),
-          onDeleted: () => removeSkill(offered, skill['id']),
+          onDeleted: () => removeSkill(offered, skill),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
@@ -165,9 +143,9 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.indigo[50],
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text("Complete Your Profile"),
+        title: const Text("Complete Your Profile", style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.indigo,
       ),
       body: Padding(
@@ -179,8 +157,10 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 12),
-                Text("Let us know more about you",
-                    style: Theme.of(context).textTheme.titleLarge),
+                Text(
+                  "Let us know more about you",
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
                 const SizedBox(height: 20),
 
                 TextFormField(
@@ -208,9 +188,8 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                 const SizedBox(height: 8),
                 skillInput(
                   label: "e.g. Java, Photoshop",
-                  value: newOfferedSkill,
-                  onChanged: (val) => newOfferedSkill = val,
-                  onAdd: () => addSkill(newOfferedSkill, true),
+                  controller: offeredController,
+                  onAdd: () => addSkill(offeredController.text, true),
                 ),
                 const SizedBox(height: 10),
                 skillChips(skillsOffered, true),
@@ -220,9 +199,8 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                 const SizedBox(height: 8),
                 skillInput(
                   label: "e.g. Python, Excel",
-                  value: newWantedSkill,
-                  onChanged: (val) => newWantedSkill = val,
-                  onAdd: () => addSkill(newWantedSkill, false),
+                  controller: wantedController,
+                  onAdd: () => addSkill(wantedController.text, false),
                 ),
                 const SizedBox(height: 10),
                 skillChips(skillsWanted, false),
@@ -231,8 +209,8 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                 isSaving
                     ? const Center(child: CircularProgressIndicator())
                     : ElevatedButton.icon(
-                  icon: const Icon(Icons.save),
-                  label: const Text("Save Profile"),
+                  icon: const Icon(Icons.save, color: Colors.white),
+                  label: const Text("Save Profile", style: TextStyle(color: Colors.white)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.indigo,
                     padding: const EdgeInsets.symmetric(vertical: 14),
