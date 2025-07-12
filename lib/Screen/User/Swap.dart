@@ -61,8 +61,6 @@ class _SwapState extends State<Swap> {
       'availability': toUser["availability"],
       'photoUrl': toUser["photoUrl"],
       'timestamp': FieldValue.serverTimestamp(),
-      'status': 'Pending',
-      'rating': '3.0', // Default rating, can be updated later
     });
 
     _nextUser();
