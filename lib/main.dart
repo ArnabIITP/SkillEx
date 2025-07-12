@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 import 'Screen/User/Bottomnav.dart';
+import 'Screen/User/setup.dart';
 
 
 
@@ -22,7 +23,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: BottomNavPage(),
+      home: ProfileSetupPage(),
     );
   }
 }
