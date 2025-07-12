@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:untitled/Screen/User/setup.dart';
+import '../Admin/Admin.dart'; // Ensure correct path to AdminPage
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -74,7 +75,6 @@ class ProfilePage extends StatelessWidget {
                       : null,
                 ),
                 const SizedBox(height: 16),
-
                 Text(
                   name,
                   style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
@@ -98,6 +98,7 @@ class ProfilePage extends StatelessWidget {
                 _buildAvailabilityPills(availability),
                 const SizedBox(height: 40),
 
+                // Edit Profile Button
                 ElevatedButton.icon(
                   onPressed: () {
                     Navigator.push(
@@ -106,7 +107,7 @@ class ProfilePage extends StatelessWidget {
                     );
                   },
                   icon: const Icon(Icons.edit, color: Colors.white),
-                  label: const Text("Edit Profile", style: TextStyle(fontSize: 18)),
+                  label: const Text("Edit Profile", style: TextStyle(fontSize: 18, color: Colors.white)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.indigo,
                     minimumSize: const Size.fromHeight(50),
@@ -117,13 +118,34 @@ class ProfilePage extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
 
+                // Admin Panel Button
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AdminPage()),
+                    );
+                  },
+                  icon: const Icon(Icons.admin_panel_settings, color: Colors.white),
+                  label: const Text("Admin Panel", style: TextStyle(fontSize: 18, color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurple,
+                    minimumSize: const Size.fromHeight(50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Logout Button
                 ElevatedButton.icon(
                   onPressed: () async {
                     await FirebaseAuth.instance.signOut();
                     Navigator.of(context).popUntil((route) => route.isFirst);
                   },
                   icon: const Icon(Icons.logout, color: Colors.white),
-                  label: const Text("Logout", style: TextStyle(fontSize: 18)),
+                  label: const Text("Logout", style: TextStyle(fontSize: 18, color: Colors.white)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
                     minimumSize: const Size.fromHeight(50),

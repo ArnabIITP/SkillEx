@@ -68,7 +68,7 @@ class _AdminPageState extends State<AdminPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Admin Panel"),
+        title: const Text("Admin Panel",style: TextStyle(color: Colors.white),),
         backgroundColor: Colors.indigo,
       ),
       body: FutureBuilder<List<DocumentSnapshot>>(
