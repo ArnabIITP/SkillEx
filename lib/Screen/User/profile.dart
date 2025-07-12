@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:untitled/Screen/User/setup.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -35,125 +36,122 @@ class ProfilePage extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Profile"),
+        title: const Text("My Profile", style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.indigo,
-        elevation: 0,
       ),
       body: user == null
           ? const Center(child: Text("No user logged in"))
           : FutureBuilder<Map<String, dynamic>>(
-          future: _fetchUserData(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
+        future: _fetchUserData(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
-            }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
 
-            final data = snapshot.data!;
-            final name = data['name'] as String;
-            final skillsOffered = data['skillsOffered'] as List<String>;
-            final skillsWanted = data['skillsWanted'] as List<String>;
-            final availability = data['availability'] as List<String>;
+          final data = snapshot.data!;
+          final name = data['name'] as String;
+          final skillsOffered = data['skillsOffered'] as List<String>;
+          final skillsWanted = data['skillsWanted'] as List<String>;
+          final availability = data['availability'] as List<String>;
 
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  const SizedBox(height: 20),
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              children: [
+                const SizedBox(height: 20),
+                CircleAvatar(
+                  radius: 60,
+                  backgroundColor: Colors.indigo.shade100,
+                  backgroundImage: user.photoURL != null && user.photoURL!.isNotEmpty
+                      ? NetworkImage(user.photoURL!)
+                      : null,
+                  child: user.photoURL == null || user.photoURL!.isEmpty
+                      ? const Icon(Icons.person, size: 60, color: Colors.indigo)
+                      : null,
+                ),
+                const SizedBox(height: 16),
 
-                  // Avatar
-                  Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.indigo, width: 3),
-                    ),
-                    child: CircleAvatar(
-                      radius: 55,
-                      backgroundImage: user.photoURL != null
-                          ? NetworkImage(user.photoURL!)
-                          : const AssetImage("assets/avatar_placeholder.png") as ImageProvider,
-                    ),
-                  ),
+                Text(
+                  name,
+                  style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  user.email ?? "No email",
+                  style: const TextStyle(color: Colors.grey),
+                ),
+                const SizedBox(height: 28),
 
-                  const SizedBox(height: 16),
-                  Text(
-                    name,
-                    style: const TextStyle(
-                        fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    user.email ?? "No email",
-                    style: const TextStyle(color: Colors.grey),
-                  ),
+                _buildSectionTitle("Skills Offered"),
+                _buildSkillPills(skillsOffered),
+                const SizedBox(height: 20),
 
-                  const SizedBox(height: 24),
+                _buildSectionTitle("Skills Wanted"),
+                _buildSkillPills(skillsWanted),
+                const SizedBox(height: 20),
 
-                  _buildSectionTitle("Skills Offered"),
-                  _buildSkillPills(skillsOffered),
+                _buildSectionTitle("Availability"),
+                _buildAvailabilityPills(availability),
+                const SizedBox(height: 40),
 
-                  const SizedBox(height: 20),
-
-                  _buildSectionTitle("Skills Wanted"),
-                  _buildSkillPills(skillsWanted),
-
-                  const SizedBox(height: 20),
-
-                  _buildSectionTitle("Availability"),
-                  _buildAvailabilityPills(availability),
-
-                  const SizedBox(height: 32),
-
-                  // Buttons
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      // TODO: Navigate to edit profile screen
-                    },
-                    icon: const Icon(Icons.edit),
-                    label: const Text("Edit Profile"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.indigo,
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const ProfileSetupPage()),
+                    );
+                  },
+                  icon: const Icon(Icons.edit, color: Colors.white),
+                  label: const Text("Edit Profile", style: TextStyle(fontSize: 18)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.indigo,
+                    minimumSize: const Size.fromHeight(50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  ElevatedButton.icon(
-                    onPressed: () async {
-                      await FirebaseAuth.instance.signOut();
-                      Navigator.of(context).popUntil((route) => route.isFirst);
-                    },
-                    icon: const Icon(Icons.logout),
-                    label: const Text("Logout"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
+                ),
+                const SizedBox(height: 16),
+
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    await FirebaseAuth.instance.signOut();
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                  },
+                  icon: const Icon(Icons.logout, color: Colors.white),
+                  label: const Text("Logout", style: TextStyle(fontSize: 18)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    minimumSize: const Size.fromHeight(50),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
                     ),
                   ),
-                ],
-              ),
-            );
-          }),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
   Widget _buildSectionTitle(String title) {
     return Align(
       alignment: Alignment.centerLeft,
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          color: Colors.indigo,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Text(
+          title,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.indigo,
+          ),
         ),
       ),
     );
@@ -165,8 +163,8 @@ class ProfilePage extends StatelessWidget {
     }
 
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+      spacing: 10,
+      runSpacing: 10,
       children: skills
           .map((skill) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -189,13 +187,13 @@ class ProfilePage extends StatelessWidget {
     }
 
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+      spacing: 10,
+      runSpacing: 10,
       children: availability
           .map((day) => Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.indigo.shade200,
+          color: Colors.indigo.shade300,
           borderRadius: BorderRadius.circular(30),
         ),
         child: Text(

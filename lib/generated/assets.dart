@@ -2,6 +2,7 @@
 class Assets {
   Assets._();
 
+  static const String adminAdmin = 'lib/Screen/Admin/Admin.dart';
   static const String generatedAssets = 'lib/generated/assets.dart';
   static const String libMain = 'lib/main.dart';
   static const String userAdded = 'lib/Screen/User/added.dart';
@@ -9,9 +10,9 @@ class Assets {
   static const String userHome = 'lib/Screen/User/Home.dart';
   static const String userLogin = 'lib/Screen/User/Login.dart';
   static const String userProfile = 'lib/Screen/User/profile.dart';
-  static const String userSearch = 'lib/Screen/User/Request.dart';
+  static const String userRequest = 'lib/Screen/User/Request.dart';
   static const String userSetup = 'lib/Screen/User/setup.dart';
-  static const String userSingup = 'lib/Screen/User/Signup.dart';
-  static const String userSwipe = 'lib/Screen/User/Swap.dart';
+  static const String userSignup = 'lib/Screen/User/Signup.dart';
+  static const String userSwap = 'lib/Screen/User/Swap.dart';
 
 }
