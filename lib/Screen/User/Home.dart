@@ -1,250 +1,228 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'Home.dart';
 
-class HomePage extends StatefulWidget {
+class ProfileSetupPage extends StatefulWidget {
+  const ProfileSetupPage({super.key});
+
   @override
-  State<HomePage> createState() => _HomePageState();
+  State<ProfileSetupPage> createState() => _ProfileSetupPageState();
 }
 
-class _HomePageState extends State<HomePage> {
-  final List<String> categories = ['All', 'Design', 'Coding', 'Music', 'Marketing'];
-  int selectedCategory = 0;
-  String searchQuery = '';
+class _ProfileSetupPageState extends State<ProfileSetupPage> {
+  final _formKey = GlobalKey<FormState>();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  final List<Map<String, String>> userData = [
-    {
-      "name": "Aryan Singh",
-      "skillsOffered": "Flutter, UI/UX",
-      "skillsWanted": "Photoshop",
-      "availability": "Weekends",
-      "photoUrl": "https://via.placeholder.com/100"
-    },
-    {
-      "name": "Sneha Roy",
-      "skillsOffered": "Python, ML",
-      "skillsWanted": "Guitar",
-      "availability": "Evenings",
-      "photoUrl": "https://via.placeholder.com/100"
-    },
-    {
-      "name": "John Doe",
-      "skillsOffered": "Public Speaking",
-      "skillsWanted": "Web Design",
-      "availability": "Anytime",
-      "photoUrl": "https://via.placeholder.com/100"
-    },
-  ];
+  final TextEditingController offeredController = TextEditingController();
+  final TextEditingController wantedController = TextEditingController();
+
+  String name = '';
+  String bio = '';
+
+  List<String> skillsOffered = [];
+  List<String> skillsWanted = [];
+
+  bool isSaving = false;
+
+  Future<void> addSkill(String skillName, bool offered) async {
+    if (skillName.trim().isEmpty) return;
+
+    final skill = skillName.trim();
+
+    setState(() {
+      if (offered) {
+        if (!skillsOffered.contains(skill)) {
+          skillsOffered.add(skill);
+        }
+        offeredController.clear();
+      } else {
+        if (!skillsWanted.contains(skill)) {
+          skillsWanted.add(skill);
+        }
+        wantedController.clear();
+      }
+    });
+  }
+
+  Future<void> saveProfile() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => isSaving = true);
+
+    try {
+      final user = _auth.currentUser;
+      if (user != null) {
+        await _firestore.collection("users").doc(user.uid).set({
+          'name': name,
+          'bio': bio,
+          'skillsOffered': skillsOffered,
+          'skillsWanted': skillsWanted,
+          'updatedAt': DateTime.now(),
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Profile saved successfully!")),
+        );
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => HomePage()));
+      }
+    } catch (e) {
+      print("Error saving profile: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to save: $e")),
+      );
+    }
+
+    setState(() => isSaving = false);
+  }
+
+  void removeSkill(bool offered, String skillName) {
+    setState(() {
+      if (offered) {
+        skillsOffered.remove(skillName);
+      } else {
+        skillsWanted.remove(skillName);
+      }
+    });
+  }
+
+  Widget skillInput({
+    required String label,
+    required TextEditingController controller,
+    required VoidCallback onAdd,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: TextFormField(
+            controller: controller,
+            decoration: InputDecoration(
+              labelText: label,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              filled: true,
+              fillColor: Colors.grey[100],
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        ElevatedButton.icon(
+          onPressed: onAdd,
+          icon: const Icon(Icons.add, color: Colors.white),
+          label: const Text("Add", style: TextStyle(color: Colors.white)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.indigo,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget skillChips(List<String> skillList, bool offered) {
+    return Wrap(
+      spacing: 8,
+      children: skillList.map((skill) {
+        return Chip(
+          label: Text(skill),
+          labelStyle: const TextStyle(color: Colors.white),
+          backgroundColor: Colors.indigo,
+          deleteIcon: const Icon(Icons.close, color: Colors.white),
+          onDeleted: () => removeSkill(offered, skill),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+        );
+      }).toList(),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Filter users by search and category
-    final filteredUsers = userData.where((user) {
-      final matchesCategory = selectedCategory == 0 ||
-          user["skillsOffered"]!.toLowerCase().contains(categories[selectedCategory].toLowerCase()) ||
-          user["skillsWanted"]!.toLowerCase().contains(categories[selectedCategory].toLowerCase());
-      final matchesSearch = searchQuery.isEmpty ||
-          user["skillsOffered"]!.toLowerCase().contains(searchQuery.toLowerCase()) ||
-          user["skillsWanted"]!.toLowerCase().contains(searchQuery.toLowerCase()) ||
-          user["name"]!.toLowerCase().contains(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
-    }).toList();
-
     return Scaffold(
-      backgroundColor: Color(0xFFF6F8FB),
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        title: Row(
-          children: [
-            CircleAvatar(
-              backgroundImage: NetworkImage("https://randomuser.me/api/portraits/men/32.jpg"),
-              radius: 20,
-            ),
-            SizedBox(width: 12),
-            Text(
-              'Skill Swap',
-              style: TextStyle(
-                color: Colors.indigo,
-                fontWeight: FontWeight.bold,
-                fontSize: 22,
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.notifications_none, color: Colors.indigo),
-            onPressed: () {},
-          ),
-        ],
+        title: const Text("Complete Your Profile", style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.indigo,
       ),
       body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Welcome back 👋',
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.indigo[900]),
-            ),
-            SizedBox(height: 6),
-            Text(
-              'Find the perfect skill swap partner!',
-              style: TextStyle(fontSize: 16, color: Colors.grey[700]),
-            ),
-            SizedBox(height: 18),
-
-            // Search Bar
-            Material(
-              elevation: 2,
-              borderRadius: BorderRadius.circular(16),
-              child: TextField(
-                onChanged: (val) => setState(() => searchQuery = val),
-                decoration: InputDecoration(
-                  hintText: 'Search by skill or name...',
-                  prefixIcon: Icon(Icons.search, color: Colors.indigo),
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(vertical: 16),
-                  filled: true,
-                  fillColor: Colors.white,
+        padding: const EdgeInsets.all(24),
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const SizedBox(height: 12),
+                Text(
+                  "Let us know more about you",
+                  style: Theme.of(context).textTheme.headlineSmall,
                 ),
-              ),
-            ),
-            SizedBox(height: 18),
+                const SizedBox(height: 20),
 
-            // Categories
-            SizedBox(
-              height: 38,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: categories.length,
-                separatorBuilder: (_, __) => SizedBox(width: 8),
-                itemBuilder: (context, index) {
-                  final isSelected = selectedCategory == index;
-                  return ChoiceChip(
-                    label: Text(categories[index]),
-                    selected: isSelected,
-                    selectedColor: Colors.indigo,
-                    backgroundColor: Colors.grey[200],
-                    labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : Colors.indigo,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    onSelected: (_) => setState(() => selectedCategory = index),
-                  );
-                },
-              ),
-            ),
-            SizedBox(height: 18),
+                TextFormField(
+                  decoration: const InputDecoration(
+                    labelText: 'Full Name',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (val) => val!.isEmpty ? 'Enter your name' : null,
+                  onChanged: (val) => name = val,
+                ),
+                const SizedBox(height: 16),
 
-            // User Cards
-            Expanded(
-              child: filteredUsers.isEmpty
-                  ? Center(
-                      child: Text(
-                        "No users found.",
-                        style: TextStyle(color: Colors.grey, fontSize: 18),
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount: filteredUsers.length,
-                      itemBuilder: (context, index) {
-                        final user = filteredUsers[index];
-                        return Card(
-                          elevation: 3,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          margin: const EdgeInsets.only(bottom: 18),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                CircleAvatar(
-                                  radius: 32,
-                                  backgroundImage: NetworkImage(user["photoUrl"]!),
-                                ),
-                                SizedBox(width: 18),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        user["name"]!,
-                                        style: TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.indigo[900],
-                                        ),
-                                      ),
-                                      SizedBox(height: 6),
-                                      Row(
-                                        children: [
-                                          Icon(Icons.handyman, size: 18, color: Colors.indigo),
-                                          SizedBox(width: 4),
-                                          Flexible(
-                                            child: Text(
-                                              "Offers: ${user["skillsOffered"]}",
-                                              style: TextStyle(fontSize: 15),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      SizedBox(height: 2),
-                                      Row(
-                                        children: [
-                                          Icon(Icons.lightbulb, size: 18, color: Colors.amber[700]),
-                                          SizedBox(width: 4),
-                                          Flexible(
-                                            child: Text(
-                                              "Wants: ${user["skillsWanted"]}",
-                                              style: TextStyle(fontSize: 15),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      SizedBox(height: 2),
-                                      Row(
-                                        children: [
-                                          Icon(Icons.access_time, size: 18, color: Colors.green),
-                                          SizedBox(width: 4),
-                                          Text(
-                                            user["availability"]!,
-                                            style: TextStyle(fontSize: 15),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                SizedBox(width: 8),
-                                ElevatedButton.icon(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.indigo,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                  ),
-                                  icon: Icon(Icons.swap_horiz, size: 18),
-                                  label: Text("Request Swap"),
-                                  onPressed: () {
-                                    // TODO: Implement swap request logic
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Swap request sent to ${user["name"]}!')),
-                                    );
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
+                TextFormField(
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'Bio',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (val) => val!.isEmpty ? 'Enter your bio' : null,
+                  onChanged: (val) => bio = val,
+                ),
+                const SizedBox(height: 24),
+
+                const Text("Skills You Offer", style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                skillInput(
+                  label: "e.g. Java, Photoshop",
+                  controller: offeredController,
+                  onAdd: () => addSkill(offeredController.text, true),
+                ),
+                const SizedBox(height: 10),
+                skillChips(skillsOffered, true),
+
+                const SizedBox(height: 24),
+                const Text("Skills You Want", style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                skillInput(
+                  label: "e.g. Python, Excel",
+                  controller: wantedController,
+                  onAdd: () => addSkill(wantedController.text, false),
+                ),
+                const SizedBox(height: 10),
+                skillChips(skillsWanted, false),
+                const SizedBox(height: 30),
+
+                isSaving
+                    ? const Center(child: CircularProgressIndicator())
+                    : ElevatedButton.icon(
+                  icon: const Icon(Icons.save, color: Colors.white),
+                  label: const Text("Save Profile", style: TextStyle(color: Colors.white)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.indigo,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
+                  ),
+                  onPressed: saveProfile,
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
