@@ -49,6 +49,7 @@ dependencies:
   shimmer: ^3.0.0
   cached_network_image: ^3.3.1
   intl: ^0.20.2
+  google_fonts: ^6.2.0
 
   # Others
   cupertino_icons: ^1.0.6

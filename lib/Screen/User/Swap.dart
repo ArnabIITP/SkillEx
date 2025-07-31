@@ -268,9 +268,6 @@ class _SwapState extends State<Swap> with SingleTickerProviderStateMixin {
   }
   
   void _animateCardOut(bool isRight) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final targetX = isRight ? screenWidth : -screenWidth;
-    
     // Animate card out of screen
     _animationController.forward(from: 0).whenComplete(() {
       if (isRight) {

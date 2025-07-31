@@ -23,31 +23,63 @@ class MyApp extends StatelessWidget {
         title: 'SkillEx',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
-          primarySwatch: Colors.indigo,
-          scaffoldBackgroundColor: Colors.grey[50],
+          useMaterial3: true,
+          primaryColor: const Color(0xFF6246EA),
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: const Color(0xFF6246EA),
+            secondary: const Color(0xFFFF6B6B),
+            tertiary: const Color(0xFF4CC9F0),
+            background: const Color(0xFFF8F9FA),
+          ),
+          scaffoldBackgroundColor: const Color(0xFFF8F9FA),
+          fontFamily: 'Poppins',
           appBarTheme: const AppBarTheme(
             elevation: 0,
-            backgroundColor: Colors.indigo,
+            backgroundColor: Color(0xFF6246EA),
             foregroundColor: Colors.white,
             centerTitle: true,
+            titleTextStyle: TextStyle(
+              fontFamily: 'Poppins',
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           elevatedButtonTheme: ElevatedButtonThemeData(
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.indigo,
+              backgroundColor: const Color(0xFF6246EA),
               foregroundColor: Colors.white,
+              elevation: 3,
+              shadowColor: const Color(0xFF6246EA).withOpacity(0.5),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(15),
               ),
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
             ),
           ),
+          // Card theme settings applied via extension method instead of direct theme
           inputDecorationTheme: InputDecorationTheme(
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(15),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15),
+              borderSide: BorderSide(color: Colors.grey.shade300),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: Colors.indigo, width: 2),
+              borderRadius: BorderRadius.circular(15),
+              borderSide: const BorderSide(color: Color(0xFF6246EA), width: 2),
             ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(15),
+              borderSide: const BorderSide(color: Colors.redAccent, width: 1),
+            ),
+            floatingLabelStyle: const TextStyle(color: Color(0xFF6246EA)),
+            prefixIconColor: Colors.grey.shade600,
+            suffixIconColor: Colors.grey.shade600,
           ),
         ),
         home: StreamBuilder<User?>(
