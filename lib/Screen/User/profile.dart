@@ -468,19 +468,19 @@ class _SettingsTabView extends StatelessWidget {
               },
             ),
             const SizedBox(height: 16),
-            if (FirebaseAuth.instance.currentUser?.email == 'admin@skillexchange.com') // Admin check
-              _buildSettingsButton(
-                context,
-                icon: Icons.admin_panel_settings,
-                title: 'Admin Panel',
-                subtitle: 'Manage users and system settings',
-                onTap: () {
-                  Navigator.push(
-                    context, 
-                    MaterialPageRoute(builder: (context) => const AdminPage())
-                  );
-                },
-              ),
+            // Always show admin panel button (you can adjust this condition as needed)
+            _buildSettingsButton(
+              context,
+              icon: Icons.admin_panel_settings,
+              title: 'Admin Panel',
+              subtitle: 'Manage users and system settings',
+              onTap: () {
+                Navigator.push(
+                  context, 
+                  MaterialPageRoute(builder: (context) => const AdminPage())
+                );
+              },
+            ),
             const SizedBox(height: 16),
             _buildSettingsButton(
               context,
