@@ -1,6 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_rating_bar/flutter_rating_bar.dart';
+import 'package:shimmer/shimmer.dart';
 
 class Swap extends StatefulWidget {
   const Swap({Key? key}) : super(key: key);
@@ -9,61 +12,194 @@ class Swap extends StatefulWidget {
   State<Swap> createState() => _SwapState();
 }
 
-class _SwapState extends State<Swap> {
-  final List<Map<String, String>> users = [
-    {
-      "uid": "user_001",
-      "name": "Aryan Singh",
-      "skillsOffered": "Flutter, UI/UX",
-      "skillsWanted": "Photoshop",
-      "availability": "Weekends",
-      "photoUrl": "https://via.placeholder.com/100"
-    },
-    {
-      "uid": "user_002",
-      "name": "Sneha Roy",
-      "skillsOffered": "Python, ML",
-      "skillsWanted": "Guitar",
-      "availability": "Evenings",
-      "photoUrl": "https://via.placeholder.com/100"
-    },
-    {
-      "uid": "user_003",
-      "name": "John Doe",
-      "skillsOffered": "Public Speaking",
-      "skillsWanted": "Web Design",
-      "availability": "Anytime",
-      "photoUrl": "https://via.placeholder.com/100"
-    },
-  ];
+class _SwapState extends State<Swap> with SingleTickerProviderStateMixin {
+  List<Map<String, dynamic>> _users = [];
+  int _currentIndex = 0;
+  Color _backgroundColor = Colors.white;
+  bool _isLoading = true;
+  bool _sendingRequest = false;
+  late AnimationController _animationController;
+  late Animation<double> _animation;
+  final _cardKey = GlobalKey();
+  Offset _dragStart = Offset.zero;
+  double _dragX = 0;
+  
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    
+    _animation = Tween<double>(begin: 0, end: 1).animate(_animationController)
+      ..addListener(() {
+        setState(() {});
+      });
+    
+    _loadUsers();
+  }
 
-  int currentIndex = 0;
-  Color backgroundColor = Colors.white;
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
 
-  void _likeUser() async {
+  Future<void> _loadUsers() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+      
+      if (currentUserId == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
+      
+      // Get current user data to match interests
+      final currentUserDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUserId)
+          .get();
+          
+      List<String> userSkillsWanted = [];
+      if (currentUserDoc.exists) {
+        final currentUserData = currentUserDoc.data()!;
+        userSkillsWanted = List<String>.from(currentUserData['skillsWanted'] ?? []);
+      }
+      
+      // Get all users
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .where('id', isNotEqualTo: currentUserId)
+          .get();
+      
+      // Get users already requested
+      final requestedSnapshot = await FirebaseFirestore.instance
+          .collection('swipeRequests')
+          .where('fromUserId', isEqualTo: currentUserId)
+          .get();
+          
+      final requestedUserIds = requestedSnapshot.docs
+          .map((doc) => (doc.data()['toUserId'] as String?) ?? '')
+          .where((id) => id.isNotEmpty)
+          .toList();
+      
+      // Filter and sort users
+      final allUsers = snapshot.docs.map((doc) {
+        final data = doc.data();
+        final userId = doc.id;
+        final skillsOffered = List<String>.from(data['skillsOffered'] ?? []);
+        
+        // Calculate match score based on skills offered that match current user's wanted skills
+        int matchScore = 0;
+        for (final skill in skillsOffered) {
+          if (userSkillsWanted.contains(skill)) {
+            matchScore++;
+          }
+        }
+        
+        return {
+          'id': userId,
+          'name': data['name'] ?? 'Anonymous',
+          'skillsOffered': skillsOffered,
+          'skillsWanted': List<String>.from(data['skillsWanted'] ?? []),
+          'availability': List<String>.from(data['availability'] ?? []),
+          'photoUrl': data['photoUrl'] ?? '',
+          'bio': data['bio'] ?? '',
+          'rating': data['rating'] ?? 0.0,
+          'completedSwaps': data['completedSwaps'] ?? 0,
+          'matchScore': matchScore,
+        };
+      })
+      .where((user) => !requestedUserIds.contains(user['id']))
+      .toList();
+      
+      // Sort by match score
+      allUsers.sort((a, b) => (b['matchScore'] as int).compareTo(a['matchScore'] as int));
+      
+      setState(() {
+        _users = allUsers;
+        _currentIndex = 0;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading users: $e');
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _likeUser() async {
+    if (_currentIndex >= _users.length || _sendingRequest) return;
+    
     final currentUser = FirebaseAuth.instance.currentUser;
-
+    
     if (currentUser == null) {
-      print("User not logged in");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please log in to send requests")),
+      );
       return;
     }
-
-    final toUser = users[currentIndex];
-
-    await FirebaseFirestore.instance.collection('swipeRequests').add({
-      'fromUserId': currentUser.uid,
-      'fromName': currentUser.displayName ?? "Anonymous",
-      'fromPhoto': currentUser.photoURL ?? "",
-      'toUserId': toUser["uid"] ?? "",
-      'toUserName': toUser["name"],
-      'skillsOffered': toUser["skillsOffered"],
-      'skillsWanted': toUser["skillsWanted"],
-      'availability': toUser["availability"],
-      'photoUrl': toUser["photoUrl"],
-      'timestamp': FieldValue.serverTimestamp(),
-    });
-
-    _nextUser();
+    
+    setState(() => _sendingRequest = true);
+    
+    try {
+      final toUser = _users[_currentIndex];
+      
+      // Get current user data
+      final currentUserDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.uid)
+          .get();
+          
+      if (!currentUserDoc.exists) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Please complete your profile first")),
+        );
+        setState(() => _sendingRequest = false);
+        return;
+      }
+      
+      final currentUserData = currentUserDoc.data()!;
+      
+      // Create swap request
+      await FirebaseFirestore.instance.collection('swipeRequests').add({
+        'fromUserId': currentUser.uid,
+        'fromName': currentUser.displayName ?? "Anonymous",
+        'fromPhoto': currentUser.photoURL ?? "",
+        'toUserId': toUser["id"],
+        'toUserName': toUser["name"],
+        'skillsOffered': currentUserData['skillsOffered'] ?? [],
+        'skillsWanted': currentUserData['skillsWanted'] ?? [],
+        'availability': currentUserData['availability'] ?? [],
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      
+      // Add notification
+      await FirebaseFirestore.instance.collection('notifications').add({
+        'userId': toUser["id"],
+        'type': 'swap_request',
+        'message': '${currentUser.displayName ?? "Someone"} wants to swap skills with you',
+        'timestamp': FieldValue.serverTimestamp(),
+        'read': false,
+        'senderName': currentUser.displayName ?? "Anonymous",
+        'senderPhoto': currentUser.photoURL ?? "",
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Request sent to ${toUser["name"]}")),
+      );
+      
+      _nextUser();
+    } catch (e) {
+      print("Error sending request: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to send request: $e")),
+      );
+    } finally {
+      setState(() => _sendingRequest = false);
+    }
   }
 
   void _rejectUser() {
@@ -71,81 +207,320 @@ class _SwapState extends State<Swap> {
   }
 
   void _nextUser() {
-    setState(() {
-      currentIndex++;
-      backgroundColor = Colors.white;
-    });
+    if (_currentIndex < _users.length - 1) {
+      setState(() {
+        _currentIndex++;
+        _backgroundColor = Colors.white;
+        _dragX = 0;
+      });
+    } else {
+      // No more users, show empty state
+      setState(() {
+        _backgroundColor = Colors.white;
+        _dragX = 0;
+      });
+    }
   }
 
-  void _handleSwipeUpdate(DragUpdateDetails details) {
+  void _handleDragStart(DragStartDetails details) {
+    _dragStart = details.globalPosition;
+  }
+
+  void _handleDragUpdate(DragUpdateDetails details) {
     setState(() {
-      if (details.delta.dx > 0) {
-        backgroundColor = Colors.green.shade100;
-      } else if (details.delta.dx < 0) {
-        backgroundColor = Colors.red.shade100;
+      _dragX = details.globalPosition.dx - _dragStart.dx;
+      
+      if (_dragX > 0) {
+        _backgroundColor = Color.lerp(
+          Colors.white, 
+          Colors.green.shade100,
+          _dragX.abs() / 150,
+        )!;
+      } else if (_dragX < 0) {
+        _backgroundColor = Color.lerp(
+          Colors.white, 
+          Colors.red.shade100,
+          _dragX.abs() / 150,
+        )!;
       }
     });
   }
 
-  void _handleSwipeEnd(DragEndDetails details) {
-    if (backgroundColor == Colors.green.shade100) {
-      _likeUser();
-    } else if (backgroundColor == Colors.red.shade100) {
-      _rejectUser();
+  void _handleDragEnd(DragEndDetails details) {
+    final velocity = details.velocity.pixelsPerSecond.dx;
+    final cardWidth = MediaQuery.of(context).size.width * 0.7;
+    
+    if (_dragX.abs() > cardWidth * 0.4 || velocity.abs() > 800) {
+      if (_dragX > 0) {
+        // Swipe right - Like
+        _animateCardOut(true);
+      } else {
+        // Swipe left - Reject
+        _animateCardOut(false);
+      }
     } else {
-      setState(() => backgroundColor = Colors.white);
+      // Return to center
+      setState(() {
+        _dragX = 0;
+        _backgroundColor = Colors.white;
+      });
     }
+  }
+  
+  void _animateCardOut(bool isRight) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final targetX = isRight ? screenWidth : -screenWidth;
+    
+    // Animate card out of screen
+    _animationController.forward(from: 0).whenComplete(() {
+      if (isRight) {
+        _likeUser();
+      } else {
+        _rejectUser();
+      }
+      _animationController.reset();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (currentIndex >= users.length) {
-      return Scaffold(
-        appBar: AppBar(title: const Text("Swap"), backgroundColor: Colors.indigo),
-        body: const Center(child: Text("No more users to swap")),
-      );
-    }
-
-    final user = users[currentIndex];
-
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: _backgroundColor,
       appBar: AppBar(
-        title: const Text("Swap"),
-        backgroundColor: Colors.indigo,
+        title: const Text("Skill Match"),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _isLoading ? null : _loadUsers,
+            tooltip: 'Refresh matches',
+          ),
+        ],
       ),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: _isLoading
+          ? _buildLoadingState()
+          : _users.isEmpty || _currentIndex >= _users.length
+              ? _buildEmptyState()
+              : _buildSwipeCard(),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Expanded(
-            child: GestureDetector(
-              onPanUpdate: _handleSwipeUpdate,
-              onPanEnd: _handleSwipeEnd,
-              child: Center(
+          const CircularProgressIndicator(),
+          const SizedBox(height: 20),
+          Text(
+            'Finding potential matches...',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off, size: 80, color: Colors.grey[400]),
+            const SizedBox(height: 24),
+            const Text(
+              "No more matches found",
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.indigo,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              "We've run out of potential skill matches. Check back later or update your profile to find more matches!",
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: _loadUsers,
+              icon: const Icon(Icons.refresh),
+              label: const Text("Refresh"),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSwipeCard() {
+    if (_currentIndex >= _users.length) return _buildEmptyState();
+    
+    final user = _users[_currentIndex];
+    final skillsOffered = List<String>.from(user['skillsOffered'] ?? []);
+    final skillsWanted = List<String>.from(user['skillsWanted'] ?? []);
+    final availability = List<String>.from(user['availability'] ?? []);
+    final rating = (user['rating'] as num).toDouble();
+    final completedSwaps = user['completedSwaps'] as int;
+    final matchScore = user['matchScore'] as int;
+    
+    final cardTransform = Matrix4.identity()
+      ..translate(_dragX + (_animation.value * MediaQuery.of(context).size.width * (_dragX > 0 ? 1 : -1)));
+    
+    return Column(
+      children: [
+        const SizedBox(height: 16),
+        
+        // Match quality indicator
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Match Quality: ',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[700],
+                ),
+              ),
+              ...List.generate(5, (index) => Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: Icon(
+                  index < matchScore ? Icons.star : Icons.star_border,
+                  color: Colors.amber,
+                  size: 20,
+                ),
+              )),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Swipe card
+        Expanded(
+          child: GestureDetector(
+            onHorizontalDragStart: _handleDragStart,
+            onHorizontalDragUpdate: _handleDragUpdate,
+            onHorizontalDragEnd: _handleDragEnd,
+            child: Center(
+              child: Transform(
+                transform: cardTransform,
+                alignment: Alignment.center,
                 child: Card(
+                  key: _cardKey,
                   elevation: 8,
-                  margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   child: Container(
-                    padding: const EdgeInsets.all(20),
                     width: MediaQuery.of(context).size.width * 0.85,
-                    height: 420,
+                    height: MediaQuery.of(context).size.height * 0.6,
+                    padding: const EdgeInsets.all(20),
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        CircleAvatar(
-                          radius: 50,
-                          backgroundImage: NetworkImage(user["photoUrl"]!),
+                        CachedNetworkImage(
+                          imageUrl: user["photoUrl"] ?? '',
+                          imageBuilder: (context, imageProvider) => CircleAvatar(
+                            radius: 60,
+                            backgroundImage: imageProvider,
+                          ),
+                          placeholder: (context, url) => Shimmer.fromColors(
+                            baseColor: Colors.grey[300]!,
+                            highlightColor: Colors.grey[100]!,
+                            child: CircleAvatar(
+                              radius: 60,
+                              backgroundColor: Colors.grey[300],
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => CircleAvatar(
+                            radius: 60,
+                            backgroundColor: Colors.grey[300],
+                            child: const Icon(Icons.person, size: 60, color: Colors.grey),
+                          ),
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          user["name"]!,
-                          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                          user["name"] ?? 'Anonymous',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                        const SizedBox(height: 10),
-                        Text("🛠️ Offers: ${user["skillsOffered"]}"),
-                        Text("🎯 Wants: ${user["skillsWanted"]}"),
-                        Text("⏰ ${user["availability"]}"),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            RatingBar.builder(
+                              initialRating: rating,
+                              minRating: 0,
+                              direction: Axis.horizontal,
+                              allowHalfRating: true,
+                              itemCount: 5,
+                              itemSize: 16,
+                              ignoreGestures: true,
+                              itemBuilder: (context, _) => const Icon(
+                                Icons.star,
+                                color: Colors.amber,
+                              ),
+                              onRatingUpdate: (_) {},
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '($completedSwaps)',
+                              style: TextStyle(
+                                color: Colors.grey[600],
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        const Divider(),
+                        const SizedBox(height: 20),
+                        
+                        // Skills section
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildSkillSection('Skills Offered', skillsOffered, Icons.auto_fix_high, Colors.indigo),
+                                const SizedBox(height: 16),
+                                _buildSkillSection('Skills Wanted', skillsWanted, Icons.search, Colors.orange[700]!),
+                                const SizedBox(height: 16),
+                                _buildAvailabilitySection(availability),
+                                if (user['bio'] != null && user['bio'].toString().isNotEmpty) ...[
+                                  const SizedBox(height: 16),
+                                  const Text(
+                                    'About',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    user['bio'].toString(),
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      color: Colors.grey[800],
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -153,43 +528,142 @@ class _SwapState extends State<Swap> {
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 32),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () {
-                    setState(() => backgroundColor = Colors.red.shade100);
-                    Future.delayed(const Duration(milliseconds: 200), _rejectUser);
-                  },
-                  icon: const Icon(Icons.close),
-                  label: const Text("Reject"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  ),
-                ),
-                const SizedBox(width: 20),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    setState(() => backgroundColor = Colors.green.shade100);
-                    Future.delayed(const Duration(milliseconds: 200), _likeUser);
-                  },
-                  icon: const Icon(Icons.favorite),
-                  label: const Text("Accept"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  ),
-                ),
-              ],
-            ),
+        ),
+        
+        // Swipe hint text
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Text(
+            'Swipe right to connect, left to pass',
+            style: TextStyle(color: Colors.grey[600]),
           ),
-        ],
-      ),
+        ),
+        
+        // Action buttons
+        Padding(
+          padding: const EdgeInsets.only(bottom: 24),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              FloatingActionButton(
+                onPressed: _sendingRequest ? null : _rejectUser,
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.red,
+                elevation: 4,
+                mini: false,
+                heroTag: 'reject',
+                child: const Icon(Icons.close, size: 32),
+              ),
+              const SizedBox(width: 32),
+              FloatingActionButton(
+                onPressed: _sendingRequest ? null : _likeUser,
+                backgroundColor: _sendingRequest ? Colors.grey : Colors.indigo,
+                foregroundColor: Colors.white,
+                elevation: 4,
+                heroTag: 'like',
+                child: _sendingRequest
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Icon(Icons.check, size: 32),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildSkillSection(String title, List<String> skills, IconData icon, Color color) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        skills.isEmpty
+            ? Text(
+                'None specified',
+                style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey[500]),
+              )
+            : Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: skills.map((skill) => Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: color.withOpacity(0.3)),
+                  ),
+                  child: Text(
+                    skill,
+                    style: TextStyle(color: color, fontSize: 12),
+                  ),
+                )).toList(),
+              ),
+      ],
+    );
+  }
+  
+  Widget _buildAvailabilitySection(List<String> availability) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: const [
+            Icon(Icons.access_time, size: 16, color: Colors.green),
+            SizedBox(width: 8),
+            Text(
+              'Availability',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: Colors.green,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        availability.isEmpty
+            ? Text(
+                'None specified',
+                style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey[500]),
+              )
+            : Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: availability.map((day) => Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.green.withOpacity(0.3)),
+                  ),
+                  child: Text(
+                    day,
+                    style: const TextStyle(color: Colors.green, fontSize: 12),
+                  ),
+                )).toList(),
+              ),
+      ],
     );
   }
 }

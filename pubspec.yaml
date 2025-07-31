@@ -35,13 +35,24 @@ dependencies:
   firebase_core: ^2.31.0
   firebase_auth: ^4.17.4
   cloud_firestore: ^4.13.4
-  curved_navigation_bar:
+  firebase_storage: ^11.6.0
+  curved_navigation_bar: ^1.0.3
+  
+  # State Management
+  provider: ^6.1.1
 
   # Image Picker
   image_picker: ^1.1.1
 
-  # Others (Optional UI or Utils)
+  # UI Components
+  flutter_rating_bar: ^4.0.1
+  shimmer: ^3.0.0
+  cached_network_image: ^3.3.1
+  intl: ^0.20.2
+
+  # Others
   cupertino_icons: ^1.0.6
+  flutter_svg: ^2.2.0
 
 
 dev_dependencies:
