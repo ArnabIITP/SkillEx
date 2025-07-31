@@ -26,7 +26,8 @@ class _HomePageState extends State<HomePage> {
     'Photography',
     'Writing'
   ];
-  int selectedCategoryIndex = 0;
+  // Set for multiple category selection, starting with 'All'
+  Set<String> selectedCategories = {'All'};
   String searchQuery = '';
   bool isLoading = true;
   List<Map<String, dynamic>> users = [];
@@ -83,9 +84,9 @@ class _HomePageState extends State<HomePage> {
   List<Map<String, dynamic>> get filteredUsers {
     List<Map<String, dynamic>> result = List.from(users);
     
-    // Filter by category
-    if (selectedCategoryIndex != 0) {
-      final selectedCategory = categories[selectedCategoryIndex].toLowerCase();
+    // Filter by selected categories
+    if (!(selectedCategories.contains('All') || selectedCategories.isEmpty)) {
+      // Only filter if 'All' is not selected and categories are not empty
       result = result.where((user) {
         final skillsOffered = (user['skillsOffered'] as List<dynamic>)
             .map((skill) => skill.toString().toLowerCase())
@@ -94,8 +95,12 @@ class _HomePageState extends State<HomePage> {
             .map((skill) => skill.toString().toLowerCase())
             .toList();
         
-        return skillsOffered.any((skill) => skill.contains(selectedCategory)) ||
-               skillsWanted.any((skill) => skill.contains(selectedCategory));
+        // Match if any selected category is found in user's skills
+        return selectedCategories.any((category) {
+          final categoryLower = category.toLowerCase();
+          return skillsOffered.any((skill) => skill.contains(categoryLower)) ||
+                 skillsWanted.any((skill) => skill.contains(categoryLower));
+        });
       }).toList();
     }
     
@@ -183,32 +188,33 @@ class _HomePageState extends State<HomePage> {
               ),
               const SizedBox(height: 16),
 
-              // Categories
-              SizedBox(
-                height: 40,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: categories.length,
-                  itemBuilder: (context, index) {
-                    final isSelected = index == selectedCategoryIndex;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: ChoiceChip(
-                        label: Text(categories[index]),
-                        selected: isSelected,
-                        selectedColor: Colors.indigo,
-                        backgroundColor: Colors.grey[200],
-                        labelStyle: TextStyle(
-                          color: isSelected ? Colors.white : Colors.black,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        ),
-                        onSelected: (_) {
-                          setState(() => selectedCategoryIndex = index);
-                        },
+              // Filter button
+              Row(
+                children: [
+                  Text(
+                    'Filter by skills:',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.filter_list),
+                    label: Text(selectedCategories.contains('All') ? 'All' : '${selectedCategories.length} selected'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF6246EA),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
                       ),
-                    );
-                  },
-                ),
+                    ),
+                    onPressed: () {
+                      _showFilterDialog();
+                    },
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
 
@@ -248,6 +254,88 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showFilterDialog() {
+    // Create a temporary set to hold selections during dialog
+    Set<String> tempSelectedCategories = Set.from(selectedCategories);
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            title: const Text('Filter Skills'),
+            content: Container(
+              width: double.maxFinite,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 12,
+                    children: List.generate(categories.length, (index) {
+                      final category = categories[index];
+                      final isSelected = tempSelectedCategories.contains(category);
+                      
+                      return FilterChip(
+                        label: Text(category),
+                        selected: isSelected,
+                        selectedColor: const Color(0xFF6246EA),
+                        checkmarkColor: Colors.white,
+                        backgroundColor: Colors.grey[200],
+                        labelStyle: TextStyle(
+                          color: isSelected ? Colors.white : Colors.black,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        ),
+                        onSelected: (_) {
+                          setDialogState(() {
+                            if (category == 'All') {
+                              // When selecting "All", clear all other selections
+                              tempSelectedCategories.clear();
+                              tempSelectedCategories.add('All');
+                            } else {
+                              // When selecting others, remove "All"
+                              tempSelectedCategories.remove('All');
+                              
+                              // Toggle the selected category
+                              if (isSelected) {
+                                tempSelectedCategories.remove(category);
+                                // If no categories left, reselect "All"
+                                if (tempSelectedCategories.isEmpty) {
+                                  tempSelectedCategories.add('All');
+                                }
+                              } else {
+                                tempSelectedCategories.add(category);
+                              }
+                            }
+                          });
+                        },
+                      );
+                    }),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                child: const Text('Cancel'),
+                onPressed: () => Navigator.pop(context),
+              ),
+              TextButton(
+                child: const Text('Apply'),
+                onPressed: () {
+                  setState(() {
+                    selectedCategories = tempSelectedCategories;
+                  });
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          );
+        },
       ),
     );
   }

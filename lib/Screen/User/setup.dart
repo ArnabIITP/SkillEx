@@ -89,6 +89,19 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
       final currentUser = appState.currentUser;
       
       if (currentUser != null) {
+        // Determine availability days based on selection type
+        List<String> availabilityDays;
+        
+        if (availabilityType == 'Custom') {
+          availabilityDays = customDays;
+        } else if (availabilityType == 'Weekdays') {
+          availabilityDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+        } else if (availabilityType == 'Weekends') {
+          availabilityDays = ['Saturday', 'Sunday'];
+        } else {
+          availabilityDays = [];
+        }
+        
         // Create an updated user model
         final updatedUser = UserModel(
           id: currentUser.id,
@@ -98,7 +111,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
           photoUrl: currentUser.photoUrl,
           skillsOffered: skillsOffered,
           skillsWanted: skillsWanted,
-          availability: availabilityType == 'Custom' ? customDays : [availabilityType],
+          availability: availabilityDays,
           isAdmin: currentUser.isAdmin,
         );
         
@@ -201,8 +214,9 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   }
 
   Widget availabilitySelector() {
-    final days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    final shortNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    final weekdays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    final weekends = ['Saturday', 'Sunday'];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -217,7 +231,15 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
           onChanged: (val) {
             setState(() {
               availabilityType = val!;
-              customDays = []; // reset on change
+              
+              if (availabilityType == 'Weekdays') {
+                customDays = List.from(weekdays);
+              } else if (availabilityType == 'Weekends') {
+                customDays = List.from(weekends);
+              } else {
+                // Keep current selection or initialize empty if nothing selected
+                customDays = customDays.isEmpty ? [] : customDays;
+              }
             });
           },
           decoration: InputDecoration(
@@ -226,30 +248,65 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
             fillColor: Colors.grey[100],
           ),
         ),
-        if (availabilityType == 'Custom') ...[
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            children: List.generate(7, (i) {
-              final isSelected = customDays.contains(shortNames[i]);
-              return ChoiceChip(
-                label: Text(days[i]),
-                selected: isSelected,
-                selectedColor: Colors.indigo,
-                labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.black),
-                onSelected: (selected) {
-                  setState(() {
-                    if (selected) {
-                      customDays.add(shortNames[i]);
-                    } else {
-                      customDays.remove(shortNames[i]);
+        const SizedBox(height: 12),
+        Text(
+          "Selected Days",
+          style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey[700]),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: days.map((day) {
+            final isSelected = availabilityType == 'Weekdays' ? weekdays.contains(day) :
+                              availabilityType == 'Weekends' ? weekends.contains(day) :
+                              customDays.contains(day);
+                              
+            return FilterChip(
+              label: Text(day),
+              selected: isSelected,
+              selectedColor: const Color(0xFF6246EA).withOpacity(0.8),
+              checkmarkColor: Colors.white,
+              labelStyle: TextStyle(
+                color: isSelected ? Colors.white : Colors.black,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              ),
+              onSelected: (selected) {
+                setState(() {
+                  if (availabilityType != 'Custom') {
+                    // Switch to custom mode when modifying predefined selections
+                    availabilityType = 'Custom';
+                    
+                    // Initialize with current selection based on previous type
+                    if (customDays.isEmpty) {
+                      if (availabilityType == 'Weekdays') {
+                        customDays = List.from(weekdays);
+                      } else if (availabilityType == 'Weekends') {
+                        customDays = List.from(weekends);
+                      }
                     }
-                  });
-                },
-              );
-            }),
-          ),
-        ],
+                  }
+                  
+                  if (selected) {
+                    if (!customDays.contains(day)) {
+                      customDays.add(day);
+                    }
+                  } else {
+                    customDays.remove(day);
+                  }
+                });
+              },
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(
+                  color: isSelected ? Colors.transparent : Colors.grey.shade300,
+                ),
+              ),
+              backgroundColor: Colors.grey.shade100,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            );
+          }).toList(),
+        ),
       ],
     );
   }

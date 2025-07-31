@@ -26,15 +26,31 @@ class UserModel {
   });
 
   factory UserModel.fromMap(Map<String, dynamic> data, String id) {
+    // Helper function to convert any type of data to a List<String>
+    List<String> convertToStringList(dynamic data) {
+      if (data == null) return [];
+      
+      if (data is String) {
+        // If it's a single string, wrap it in a list
+        return [data];
+      } else if (data is List) {
+        // If it's already a list, convert each element to String
+        return data.map<String>((item) => item.toString()).toList();
+      } else {
+        // For any other type, return empty list
+        return [];
+      }
+    }
+    
     return UserModel(
       id: id,
       email: data['email'] ?? '',
       name: data['name'] ?? '',
       bio: data['bio'] ?? '',
       photoUrl: data['photoUrl'] ?? '',
-      skillsOffered: List<String>.from(data['skillsOffered'] ?? []),
-      skillsWanted: List<String>.from(data['skillsWanted'] ?? []),
-      availability: List<String>.from(data['availability'] ?? []),
+      skillsOffered: convertToStringList(data['skillsOffered']),
+      skillsWanted: convertToStringList(data['skillsWanted']),
+      availability: convertToStringList(data['availability']),
       isAdmin: data['isAdmin'] ?? false,
       rating: (data['rating'] ?? 0.0).toDouble(),
       completedSwaps: data['completedSwaps'] ?? 0,

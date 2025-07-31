@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:async';
 
 class AdminPage extends StatefulWidget {
   const AdminPage({super.key});
@@ -24,7 +25,7 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _fetchAllUsers();
+    _setupRealtimeUpdates();
     _fetchAdminStats();
   }
   
@@ -32,23 +33,40 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
   void dispose() {
     _tabController.dispose();
     _searchController.dispose();
+    _usersSubscription?.cancel();
     super.dispose();
   }
 
-  Future<void> _fetchAllUsers() async {
-    setState(() => _isLoading = true);
-    try {
-      final snapshot = await _firestore.collection('users').get();
+  // Stream subscription for real-time updates
+  StreamSubscription<QuerySnapshot>? _usersSubscription;
+  
+  // Method to start listening to real-time updates
+  void _setupRealtimeUpdates() {
+    // Cancel any existing subscription
+    _usersSubscription?.cancel();
+    
+    // Set up real-time listener
+    _usersSubscription = _firestore.collection('users').snapshots().listen((snapshot) {
       setState(() {
         _allUsers = snapshot.docs;
         _isLoading = false;
       });
-    } catch (e) {
+      
+      // Also update stats when users change
+      _fetchAdminStats();
+    }, onError: (e) {
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to load users: $e")),
+        SnackBar(content: Text("Error in real-time updates: $e")),
       );
-    }
+    });
+  }
+  
+  // Legacy method - now just initiates loading state
+  Future<void> _fetchAllUsers() async {
+    setState(() => _isLoading = true);
+    // Real-time updates will handle the actual data loading
+    _setupRealtimeUpdates();
   }
   
   Future<void> _fetchAdminStats() async {

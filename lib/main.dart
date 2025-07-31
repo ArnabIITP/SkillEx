@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'Screen/User/Bottomnav.dart';
 import 'Screen/Auth/login_page.dart';
 import 'providers/app_state.dart';
+import 'providers/user_data_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,8 +18,11 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => AppState(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AppState()),
+        ChangeNotifierProvider(create: (_) => UserDataProvider()),
+      ],
       child: MaterialApp(
         title: 'SkillEx',
         debugShowCheckedModeBanner: false,
