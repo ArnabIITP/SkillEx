@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-
-import 'Bottomnav.dart';
-
+import 'package:provider/provider.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import '../../providers/app_state.dart';
+import '../../models/user_model.dart';
 
 class ProfileSetupPage extends StatefulWidget {
   const ProfileSetupPage({super.key});
@@ -14,23 +14,116 @@ class ProfileSetupPage extends StatefulWidget {
 
 class _ProfileSetupPageState extends State<ProfileSetupPage> {
   final _formKey = GlobalKey<FormState>();
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  
+  // Profile data
+  late String name;
+  late String bio;
+  File? _profileImage;
+  List<String> skillsOffered = [];
+  List<String> skillsWanted = [];
+  List<String> availability = [];
 
-  final TextEditingController offeredController = TextEditingController();
-  final TextEditingController wantedController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _bioController = TextEditingController();
+  final TextEditingController _newSkillController = TextEditingController();
+  final TextEditingController _newWantedSkillController = TextEditingController();
+  final TextEditingController _newAvailabilityController = TextEditingController();
 
-  String name = '';
-  String bio = '';
+  bool isSaving = false;
   String availabilityType = 'Weekdays';
   List<String> customDays = [];
 
-  List<String> skillsOffered = [];
-  List<String> skillsWanted = [];
+  @override
+  void initState() {
+    super.initState();
+    // Initialize with user data
+    final appState = Provider.of<AppState>(context, listen: false);
+    final user = appState.currentUser;
+    
+    if (user != null) {
+      _nameController.text = user.name;
+      _bioController.text = user.bio;
+      skillsOffered = List.from(user.skillsOffered);
+      skillsWanted = List.from(user.skillsWanted);
+      availability = List.from(user.availability);
+      
+      if (availability.contains('Weekdays')) {
+        availabilityType = 'Weekdays';
+      } else if (availability.contains('Weekends')) {
+        availabilityType = 'Weekends';
+      } else {
+        availabilityType = 'Custom';
+        customDays = List.from(availability);
+      }
+    }
+  }
 
-  bool isSaving = false;
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _bioController.dispose();
+    _newSkillController.dispose();
+    _newWantedSkillController.dispose();
+    _newAvailabilityController.dispose();
+    super.dispose();
+  }
 
-  Future<void> addSkill(String skillName, bool offered) async {
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    
+    if (image != null) {
+      setState(() {
+        _profileImage = File(image.path);
+      });
+    }
+  }
+
+  Future<void> saveProfile() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => isSaving = true);
+
+    try {
+      final appState = Provider.of<AppState>(context, listen: false);
+      final currentUser = appState.currentUser;
+      
+      if (currentUser != null) {
+        // Create an updated user model
+        final updatedUser = UserModel(
+          id: currentUser.id,
+          email: currentUser.email,
+          name: _nameController.text,
+          bio: _bioController.text,
+          photoUrl: currentUser.photoUrl,
+          skillsOffered: skillsOffered,
+          skillsWanted: skillsWanted,
+          availability: availabilityType == 'Custom' ? customDays : [availabilityType],
+          isAdmin: currentUser.isAdmin,
+        );
+        
+        // Update the user profile
+        await appState.updateUserProfile(updatedUser);
+
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Profile saved successfully!")),
+        );
+
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      print("Error saving profile: $e");
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to save: $e")),
+      );
+    }
+
+    setState(() => isSaving = false);
+  }
+
+  void _addSkill(String skillName, bool offered) {
     if (skillName.trim().isEmpty) return;
 
     final skill = skillName.trim();
@@ -40,50 +133,14 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
         if (!skillsOffered.contains(skill)) {
           skillsOffered.add(skill);
         }
-        offeredController.clear();
+        _newSkillController.clear();
       } else {
         if (!skillsWanted.contains(skill)) {
           skillsWanted.add(skill);
         }
-        wantedController.clear();
+        _newWantedSkillController.clear();
       }
     });
-  }
-
-  Future<void> saveProfile() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() => isSaving = true);
-
-    try {
-      final user = _auth.currentUser;
-      if (user != null) {
-        await _firestore.collection("users").doc(user.uid).set({
-          'name': name,
-          'bio': bio,
-          'skillsOffered': skillsOffered,
-          'skillsWanted': skillsWanted,
-          'availability': availabilityType == 'Custom' ? customDays : availabilityType,
-          'updatedAt': DateTime.now(),
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Profile saved successfully!")),
-        );
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => BottomNavPage()),
-        );
-      }
-    } catch (e) {
-      print("Error saving profile: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to save: $e")),
-      );
-    }
-
-    setState(() => isSaving = false);
   }
 
   Widget skillInput({
@@ -129,6 +186,12 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
           label: Text(skill),
           labelStyle: const TextStyle(color: Colors.white),
           backgroundColor: Colors.indigo,
+          onDeleted: () {
+            setState(() {
+              skillList.remove(skill);
+            });
+          },
+          deleteIconColor: Colors.white70,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
@@ -138,8 +201,8 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   }
 
   Widget availabilitySelector() {
-    final days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thrusday', 'Friday', 'Saturday'];
-    final fullNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    final days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    final shortNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -168,7 +231,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
           Wrap(
             spacing: 8,
             children: List.generate(7, (i) {
-              final isSelected = customDays.contains(fullNames[i]);
+              final isSelected = customDays.contains(shortNames[i]);
               return ChoiceChip(
                 label: Text(days[i]),
                 selected: isSelected,
@@ -177,9 +240,9 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                 onSelected: (selected) {
                   setState(() {
                     if (selected) {
-                      customDays.add(fullNames[i]);
+                      customDays.add(shortNames[i]);
                     } else {
-                      customDays.remove(fullNames[i]);
+                      customDays.remove(shortNames[i]);
                     }
                   });
                 },
@@ -214,7 +277,46 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                 ),
                 const SizedBox(height: 20),
 
+                // Profile Picture
+                Center(
+                  child: Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      CircleAvatar(
+                        radius: 60,
+                        backgroundColor: Colors.indigo.withOpacity(0.2),
+                        backgroundImage: _profileImage != null
+                            ? FileImage(_profileImage!)
+                            : (Provider.of<AppState>(context).currentUser?.photoUrl.isNotEmpty == true
+                                ? NetworkImage(Provider.of<AppState>(context).currentUser!.photoUrl) as ImageProvider
+                                : null),
+                        child: _profileImage == null && 
+                               (Provider.of<AppState>(context).currentUser?.photoUrl.isEmpty ?? true)
+                            ? Icon(Icons.person, size: 60, color: Colors.indigo)
+                            : null,
+                      ),
+                      GestureDetector(
+                        onTap: _pickImage,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.indigo,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 24),
+
                 TextFormField(
+                  controller: _nameController,
                   decoration: const InputDecoration(
                     labelText: 'Full Name',
                     border: OutlineInputBorder(),
@@ -225,12 +327,13 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                 const SizedBox(height: 16),
 
                 TextFormField(
-                  maxLines: 2,
+                  controller: _bioController,
+                  maxLines: 3,
                   decoration: const InputDecoration(
                     labelText: 'Bio',
                     border: OutlineInputBorder(),
+                    hintText: 'Tell us about yourself...'
                   ),
-                  validator: (val) => val!.isEmpty ? 'Enter your bio' : null,
                   onChanged: (val) => bio = val,
                 ),
                 const SizedBox(height: 24),
@@ -239,8 +342,8 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                 const SizedBox(height: 8),
                 skillInput(
                   label: "e.g. Java, Photoshop",
-                  controller: offeredController,
-                  onAdd: () => addSkill(offeredController.text, true),
+                  controller: _newSkillController,
+                  onAdd: () => _addSkill(_newSkillController.text, true),
                 ),
                 const SizedBox(height: 10),
                 skillChips(skillsOffered),
@@ -250,8 +353,8 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                 const SizedBox(height: 8),
                 skillInput(
                   label: "e.g. Python, Excel",
-                  controller: wantedController,
-                  onAdd: () => addSkill(wantedController.text, false),
+                  controller: _newWantedSkillController,
+                  onAdd: () => _addSkill(_newWantedSkillController.text, false),
                 ),
                 const SizedBox(height: 10),
                 skillChips(skillsWanted),
@@ -264,7 +367,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                     ? const Center(child: CircularProgressIndicator())
                     : ElevatedButton.icon(
                   icon: const Icon(Icons.save, color: Colors.white),
-                  label: const Text("Save Profile", style: TextStyle(color: Colors.white)),
+                  label: const Text("Save Profile", style: TextStyle(fontSize: 16, color: Colors.white)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.indigo,
                     padding: const EdgeInsets.symmetric(vertical: 14),
