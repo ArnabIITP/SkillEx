@@ -310,8 +310,23 @@ class _AboutTabView extends StatelessWidget {
   }
   
   Widget _buildAvailabilitySchedule() {
-    final availability = userData['availability'] as List<dynamic>? ?? [];
-    final List<String> availabilityList = availability.map((item) => item.toString()).toList();
+    // Safe conversion from any type to List<String>
+    List<String> convertToStringList(dynamic data) {
+      if (data == null) return [];
+      
+      if (data is String) {
+        // If it's a single string, wrap it in a list
+        return [data];
+      } else if (data is List) {
+        // If it's already a list, convert each element to String
+        return data.map((item) => item.toString()).toList();
+      } else {
+        // For any other type, return empty list
+        return [];
+      }
+    }
+    
+    final List<String> availabilityList = convertToStringList(userData['availability']);
     
     final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     
@@ -394,8 +409,24 @@ class _SkillsTabView extends StatelessWidget {
     );
   }
 
-  Widget _buildSkillPills(List<dynamic> skills, Color color) {
-    final List<String> skillsList = skills.map((item) => item.toString()).toList();
+  Widget _buildSkillPills(dynamic skills, Color color) {
+    // Safe conversion from any type to List<String>
+    List<String> convertToStringList(dynamic data) {
+      if (data == null) return [];
+      
+      if (data is String) {
+        // If it's a single string, wrap it in a list
+        return [data];
+      } else if (data is List) {
+        // If it's already a list, convert each element to String
+        return data.map((item) => item.toString()).toList();
+      } else {
+        // For any other type, return empty list
+        return [];
+      }
+    }
+    
+    final List<String> skillsList = convertToStringList(skills);
     
     if (skillsList.isEmpty) {
       return const Padding(
