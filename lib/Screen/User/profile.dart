@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -23,9 +24,23 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     
-    // Make sure the provider is initialized
+    // Make sure the provider is initialized and refreshed
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<UserDataProvider>(context, listen: false);
+      final userProvider = Provider.of<UserDataProvider>(context, listen: false);
+      
+      // Refresh data from database to ensure it's up-to-date
+      userProvider.refreshUserData();
+      
+      // Set up a periodic refresh to keep duration calculations up-to-date
+      Timer.periodic(const Duration(minutes: 1), (timer) {
+        if (mounted) {
+          setState(() {
+            // This triggers a rebuild to update membership duration in real-time
+          });
+        } else {
+          timer.cancel();
+        }
+      });
     });
   }
   
@@ -35,7 +50,42 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
     super.dispose();
   }
 
-  // Helper method to get membership duration
+  // Helper method to get membership duration - calculated in real-time
+  // Format timestamp for display
+  String _formatTimestamp(dynamic timestamp) {
+    if (timestamp == null) return 'Unknown';
+    
+    DateTime date;
+    if (timestamp is DateTime) {
+      date = timestamp;
+    } else if (timestamp is Timestamp) {
+      date = timestamp.toDate();
+    } else {
+      return 'Unknown';
+    }
+    
+    // Calculate the difference from now
+    final now = DateTime.now();
+    final difference = now.difference(date);
+    
+    // Format based on how recent
+    if (difference.inMinutes < 1) {
+      return 'Just now';
+    } else if (difference.inHours < 1) {
+      final minutes = difference.inMinutes;
+      return '$minutes minute${minutes != 1 ? 's' : ''} ago';
+    } else if (difference.inDays < 1) {
+      final hours = difference.inHours;
+      return '$hours hour${hours != 1 ? 's' : ''} ago';
+    } else if (difference.inDays < 30) {
+      final days = difference.inDays;
+      return '$days day${days != 1 ? 's' : ''} ago';
+    } else {
+      // Format as date for older updates
+      return '${date.day}/${date.month}/${date.year}';
+    }
+  }
+
   String _getMembershipDuration(dynamic memberSince) {
     if (memberSince == null) return '0 days';
     
@@ -48,12 +98,17 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
       return '0 days';
     }
     
+    // Use current time to always calculate real-time duration
     final now = DateTime.now();
     final difference = now.difference(date);
     final days = difference.inDays;
     
-    if (days < 30) {
-      return '$days days';
+    // Calculate duration in the most appropriate unit
+    if (days < 1) {
+      final hours = difference.inHours;
+      return '$hours hour${hours != 1 ? 's' : ''}';
+    } else if (days < 30) {
+      return '$days day${days != 1 ? 's' : ''}';
     } else if (days < 365) {
       final months = (days / 30).floor();
       return '$months month${months > 1 ? 's' : ''}';
@@ -119,20 +174,30 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                                       ),
                                     ),
                                     
-                                    // Profile header
+                                    // Profile header - real-time data
                                     Padding(
                                       padding: const EdgeInsets.only(top: 16, left: 16, right: 16),
                                       child: Row(
                                         children: [
-                                          CircleAvatar(
-                                            radius: 40,
-                                            backgroundColor: Colors.white,
-                                            child: Text(
-                                              userData['name']?.toString().substring(0, 1).toUpperCase() ?? 'A',
-                                              style: TextStyle(
-                                                fontSize: 32,
-                                                fontWeight: FontWeight.bold,
-                                                color: Theme.of(context).primaryColor,
+                                          // Avatar with real-time name initial
+                                          Hero(
+                                            tag: 'profile_avatar',
+                                            child: CircleAvatar(
+                                              radius: 40,
+                                              backgroundColor: Colors.white,
+                                              child: AnimatedSwitcher(
+                                                duration: const Duration(milliseconds: 300),
+                                                child: Text(
+                                                  userData['name']?.toString().isNotEmpty == true
+                                                    ? userData['name']!.toString().substring(0, 1).toUpperCase()
+                                                    : 'A',
+                                                  key: ValueKey(userData['name']),
+                                                  style: TextStyle(
+                                                    fontSize: 32,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Theme.of(context).primaryColor,
+                                                  ),
+                                                ),
                                               ),
                                             ),
                                           ),
@@ -141,14 +206,20 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                                             child: Column(
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
-                                                Text(
-                                                  userData['name']?.toString() ?? 'Anonymous User',
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 24,
-                                                    fontWeight: FontWeight.bold,
+                                                // Animated name transition for real-time updates
+                                                AnimatedSwitcher(
+                                                  duration: const Duration(milliseconds: 300),
+                                                  child: Text(
+                                                    userData['name']?.toString() ?? 'Anonymous User',
+                                                    key: ValueKey(userData['name']),
+                                                    style: const TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 24,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
                                                   ),
                                                 ),
+                                                // Email from Firebase Auth - always real-time
                                                 Text(
                                                   user.email ?? 'No email',
                                                   style: const TextStyle(
@@ -156,6 +227,16 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                                                     fontSize: 14,
                                                   ),
                                                 ),
+                                                // Last update timestamp
+                                                if (userData['lastUpdated'] != null)
+                                                  Text(
+                                                    'Last updated: ${_formatTimestamp(userData['lastUpdated'])}',
+                                                    style: const TextStyle(
+                                                      color: Colors.white60,
+                                                      fontSize: 12,
+                                                      fontStyle: FontStyle.italic,
+                                                    ),
+                                                  ),
                                               ],
                                             ),
                                           ),
@@ -167,7 +248,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                                 ),
                               ),
                             ),
-                            // Stats Cards
+                            // Stats Cards - Real-time updates
                             Padding(
                               padding: const EdgeInsets.all(8.0),
                               child: Row(
@@ -176,7 +257,10 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                                   Expanded(
                                     child: _buildStatCard(
                                       label: 'RATING',
-                                      value: (userData['rating'] ?? 0.0).toString(),
+                                      // Format to one decimal place
+                                      value: (userData['rating'] ?? 0.0) is double 
+                                          ? (userData['rating'] as double).toStringAsFixed(1)
+                                          : (userData['rating'] ?? 0.0).toString(),
                                       icon: Icons.star,
                                       iconColor: Colors.amber,
                                     ),
@@ -192,6 +276,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                                   Expanded(
                                     child: _buildStatCard(
                                       label: 'MEMBER FOR',
+                                      // Calculate in real-time on every build
                                       value: _getMembershipDuration(userData['memberSince']),
                                       icon: Icons.calendar_month,
                                       iconColor: Colors.green,
@@ -230,7 +315,7 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
     );
   }
 
-  // Build a card for showing a statistic
+  // Build a card for showing a statistic - real-time updates
   Widget _buildStatCard({
     required String label,
     required String value,
@@ -246,11 +331,26 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
           children: [
             Icon(icon, color: iconColor, size: 28),
             const SizedBox(height: 8),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+            // Animated value to show transitions for real-time updates
+            TweenAnimationBuilder<double>(
+              duration: const Duration(milliseconds: 500),
+              tween: Tween<double>(
+                begin: 0,
+                end: 1,
+              ),
+              builder: (context, value, child) {
+                return Opacity(
+                  opacity: value,
+                  child: child,
+                );
+              },
+              child: Text(
+                value,
+                key: ValueKey(value), // Key based on value for proper rebuilding
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             const SizedBox(height: 4),
@@ -490,40 +590,107 @@ class _AboutTabViewState extends State<_AboutTabView> {
     
     final List<String> availabilityList = convertToStringList(widget.userData['availability']);
     
-    final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    // Get the current day of the week
+    final now = DateTime.now();
+    final currentDay = _getDayName(now.weekday);
     
+    final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          children: days.map((day) {
-            final isAvailable = availabilityList.contains(day);
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Row(
-                children: [
-                  Icon(
-                    isAvailable ? Icons.check_circle : Icons.cancel,
-                    color: isAvailable ? Colors.green : Colors.grey,
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    day,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: isAvailable ? FontWeight.bold : FontWeight.normal,
-                      color: isAvailable ? Colors.black : Colors.grey,
-                    ),
-                  ),
-                ],
+      child: Column(
+        children: [
+          // Current day status
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            decoration: BoxDecoration(
+              color: availabilityList.contains(currentDay) 
+                  ? Colors.green.withOpacity(0.1) 
+                  : Colors.grey.withOpacity(0.1),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
               ),
-            );
-          }).toList(),
-        ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  availabilityList.contains(currentDay)
+                      ? Icons.circle
+                      : Icons.circle_outlined,
+                  color: availabilityList.contains(currentDay)
+                      ? Colors.green
+                      : Colors.grey,
+                  size: 14,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  availabilityList.contains(currentDay)
+                      ? 'Available Today'
+                      : 'Not Available Today',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: availabilityList.contains(currentDay)
+                        ? Colors.green
+                        : Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Divider
+          Divider(height: 1, thickness: 1, color: Colors.grey.withOpacity(0.2)),
+          // Weekly schedule
+          Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              children: days.map((day) {
+                final isAvailable = availabilityList.contains(day);
+                final isToday = day == currentDay;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    children: [
+                      Icon(
+                        isAvailable ? Icons.check_circle : Icons.cancel,
+                        color: isAvailable ? Colors.green : Colors.grey,
+                        size: isToday ? 22 : 18,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        day + (isToday ? ' (Today)' : ''),
+                        style: TextStyle(
+                          fontSize: isToday ? 17 : 16,
+                          fontWeight: isToday || isAvailable ? FontWeight.bold : FontWeight.normal,
+                          color: isToday ? Colors.black : (isAvailable ? Colors.black87 : Colors.grey),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
       ),
     );
+  }
+  
+  // Helper method to get day name from weekday number
+  String _getDayName(int weekday) {
+    switch (weekday) {
+      case 1: return 'Monday';
+      case 2: return 'Tuesday';
+      case 3: return 'Wednesday';
+      case 4: return 'Thursday';
+      case 5: return 'Friday';
+      case 6: return 'Saturday';
+      case 7: return 'Sunday';
+      default: return '';
+    }
   }
 }
 

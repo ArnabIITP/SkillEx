@@ -35,33 +35,94 @@ class UserDataProvider extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     
+    // Listen to real-time user data updates
     _userSubscription = _firestore
         .collection('users')
         .doc(user.uid)
         .snapshots()
-        .listen((docSnapshot) {
+        .listen((docSnapshot) async {
           if (docSnapshot.exists) {
             _userData = docSnapshot.data();
             _userData!['id'] = user.uid;
-            // Also create a UserModel object for easier access to typed data
+            
+            // Make sure memberSince is always a timestamp
+            if (_userData!['memberSince'] == null) {
+              // If memberSince is missing, set it to now
+              final timestamp = Timestamp.now();
+              await _firestore
+                .collection('users')
+                .doc(user.uid)
+                .update({'memberSince': timestamp});
+              _userData!['memberSince'] = timestamp;
+            }
+            
+            // Fetch real-time ratings
+            try {
+              // Get the average rating from ratings collection
+              final ratingsSnapshot = await _firestore
+                .collection('ratings')
+                .where('userId', isEqualTo: user.uid)
+                .get();
+              
+              if (ratingsSnapshot.docs.isNotEmpty) {
+                double totalRating = 0;
+                for (var doc in ratingsSnapshot.docs) {
+                  totalRating += (doc.data()['rating'] ?? 0).toDouble();
+                }
+                double averageRating = totalRating / ratingsSnapshot.docs.length;
+                
+                // Update rating in userData
+                _userData!['rating'] = averageRating;
+                
+                // Also update in Firestore for persistence
+                await _firestore
+                  .collection('users')
+                  .doc(user.uid)
+                  .update({'rating': averageRating});
+              }
+              
+              // Fetch completed swaps count
+              final swapsSnapshot = await _firestore
+                .collection('swaps')
+                .where('participants', arrayContains: user.uid)
+                .where('status', isEqualTo: 'completed')
+                .get();
+              
+              // Update completed swaps count
+              int completedSwapsCount = swapsSnapshot.docs.length;
+              _userData!['completedSwaps'] = completedSwapsCount;
+              
+              // Also update in Firestore for persistence
+              await _firestore
+                .collection('users')
+                .doc(user.uid)
+                .update({'completedSwaps': completedSwapsCount});
+              
+            } catch (e) {
+              print('Error fetching real-time metrics: $e');
+              // Continue with existing data even if metrics update fails
+            }
+            
+            // Create UserModel with updated data
             _userModel = UserModel.fromMap(_userData!, user.uid);
           } else {
-            // Default data for new users
+            // Create new user document with current timestamp
+            final timestamp = Timestamp.now();
             _userData = {
-              'name': 'Anonymous User',
+              'name': user.displayName ?? 'Anonymous User',
               'bio': 'No bio available',
               'skillsOffered': [],
               'skillsWanted': [],
               'availability': [],
               'rating': 0.0,
               'completedSwaps': 0,
-              'memberSince': DateTime.now(),
+              'memberSince': timestamp,
               'id': user.uid
             };
             _userModel = UserModel.fromMap(_userData!, user.uid);
             
             // Create the user document in Firestore
-            _firestore.collection('users').doc(user.uid).set(_userData!);
+            await _firestore.collection('users').doc(user.uid).set(_userData!);
           }
           _isLoading = false;
           notifyListeners();
@@ -133,12 +194,34 @@ class UserDataProvider extends ChangeNotifier {
     if (_auth.currentUser == null) return;
     
     try {
+      // Update the field in Firestore
       await _firestore
         .collection('users')
         .doc(_auth.currentUser!.uid)
         .update({field: value});
+      
+      // Add a timestamp for the last update
+      await _firestore
+        .collection('users')
+        .doc(_auth.currentUser!.uid)
+        .update({'lastUpdated': FieldValue.serverTimestamp()});
+      
+      // Track the change in activity log for analytics
+      try {
+        await _firestore.collection('activityLogs').add({
+          'userId': _auth.currentUser!.uid,
+          'action': 'profile_update',
+          'field': field,
+          'timestamp': FieldValue.serverTimestamp(),
+        });
+      } catch (logError) {
+        // Non-critical error - don't stop execution if logging fails
+        print('Error logging activity: $logError');
+      }
+      
     } catch (e) {
       print('Error updating field $field: $e');
+      throw e; // Re-throw to allow UI to handle the error
     }
   }
   
