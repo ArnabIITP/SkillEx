@@ -75,6 +75,9 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
       builder: (context, userDataProvider, _) {
         final isLoading = userDataProvider.isLoading;
         final userData = userDataProvider.userData;
+        
+        // This will automatically update when data changes in Firestore
+        // No need to manually refresh
 
         return Scaffold(
           body: user == null
@@ -265,41 +268,200 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
   }
 }
 
-class _AboutTabView extends StatelessWidget {
+class _AboutTabView extends StatefulWidget {
   final Map<String, dynamic> userData;
 
   const _AboutTabView({required this.userData});
 
   @override
+  State<_AboutTabView> createState() => _AboutTabViewState();
+}
+
+class _AboutTabViewState extends State<_AboutTabView> {
+  final TextEditingController _bioController = TextEditingController();
+  bool _isEditing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _bioController.text = widget.userData['bio']?.toString() ?? '';
+  }
+
+  @override
+  void dispose() {
+    _bioController.dispose();
+    super.dispose();
+  }
+
+  // Update bio in real-time
+  Future<void> _saveBio() async {
+    final userProvider = Provider.of<UserDataProvider>(context, listen: false);
+    
+    try {
+      await userProvider.updateField('bio', _bioController.text);
+      setState(() => _isEditing = false);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update bio: $e')),
+      );
+    }
+  }
+  
+  // Show availability dialog for real-time editing
+  void _showAvailabilityDialog() {
+    final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    
+    // Convert to string list 
+    List<String> convertToStringList(dynamic data) {
+      if (data == null) return [];
+      
+      if (data is String) {
+        return [data];
+      } else if (data is List) {
+        return data.map((item) => item.toString()).toList();
+      } else {
+        return [];
+      }
+    }
+    
+    // Get current availability
+    final List<String> currentAvailability = convertToStringList(widget.userData['availability']);
+    
+    // Create a map of day selections
+    final Map<String, bool> selections = {
+      for (var day in days) day: currentAvailability.contains(day)
+    };
+    
+    // Use a StatefulBuilder to manage dialog state
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Edit Availability'),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: ListView(
+                  shrinkWrap: true,
+                  children: days.map((day) {
+                    return CheckboxListTile(
+                      title: Text(day),
+                      value: selections[day],
+                      onChanged: (bool? value) {
+                        setDialogState(() {
+                          selections[day] = value ?? false;
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    // Get selected days
+                    final List<String> updatedAvailability = days
+                        .where((day) => selections[day] == true)
+                        .toList();
+                    
+                    // Update in database
+                    try {
+                      final userProvider = Provider.of<UserDataProvider>(context, listen: false);
+                      await userProvider.updateField('availability', updatedAvailability);
+                      Navigator.of(context).pop();
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Failed to update availability: $e')),
+                      );
+                    }
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Update controller text if userData changes
+    if (!_isEditing && widget.userData['bio'] != _bioController.text) {
+      _bioController.text = widget.userData['bio']?.toString() ?? '';
+    }
+    
     return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'About Me',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'About Me',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(_isEditing ? Icons.save : Icons.edit),
+                  onPressed: () {
+                    if (_isEditing) {
+                      _saveBio();
+                    } else {
+                      setState(() => _isEditing = true);
+                    }
+                  },
+                ),
+              ],
             ),
             const SizedBox(height: 8),
-            Text(
-              userData['bio']?.toString() ?? 'No bio available',
-              style: const TextStyle(
-                fontSize: 16,
-                height: 1.5,
-              ),
-            ),
+            _isEditing
+                ? TextField(
+                    controller: _bioController,
+                    maxLines: 5,
+                    decoration: InputDecoration(
+                      hintText: 'Write something about yourself...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      contentPadding: const EdgeInsets.all(12),
+                    ),
+                  )
+                : Text(
+                    widget.userData['bio']?.toString() ?? 'No bio available',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      height: 1.5,
+                    ),
+                  ),
             const SizedBox(height: 24),
-            const Text(
-              'Availability',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Availability',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: () => _showAvailabilityDialog(),
+                  icon: const Icon(Icons.edit_calendar),
+                  label: const Text('Edit'),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             _buildAvailabilitySchedule(),
@@ -326,7 +488,7 @@ class _AboutTabView extends StatelessWidget {
       }
     }
     
-    final List<String> availabilityList = convertToStringList(userData['availability']);
+    final List<String> availabilityList = convertToStringList(widget.userData['availability']);
     
     final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     
@@ -365,10 +527,107 @@ class _AboutTabView extends StatelessWidget {
   }
 }
 
-class _SkillsTabView extends StatelessWidget {
+class _SkillsTabView extends StatefulWidget {
   final Map<String, dynamic> userData;
 
   const _SkillsTabView({required this.userData});
+
+  @override
+  State<_SkillsTabView> createState() => _SkillsTabViewState();
+}
+
+class _SkillsTabViewState extends State<_SkillsTabView> {
+  final TextEditingController _newSkillController = TextEditingController();
+  bool _addingOfferedSkill = true;
+  
+  @override
+  void dispose() {
+    _newSkillController.dispose();
+    super.dispose();
+  }
+
+  // Add a skill in real-time to the database
+  Future<void> _addSkill(String skill, bool isOffered) async {
+    if (skill.isEmpty) return;
+    
+    final userProvider = Provider.of<UserDataProvider>(context, listen: false);
+    
+    try {
+      List<String> convertToStringList(dynamic data) {
+        if (data == null) return [];
+        
+        if (data is String) {
+          return [data];
+        } else if (data is List) {
+          return data.map((item) => item.toString()).toList();
+        } else {
+          return [];
+        }
+      }
+      
+      // Get current skills
+      List<String> currentSkills = isOffered 
+        ? convertToStringList(widget.userData['skillsOffered'])
+        : convertToStringList(widget.userData['skillsWanted']);
+      
+      // Add new skill if not already present
+      if (!currentSkills.contains(skill)) {
+        currentSkills.add(skill);
+        
+        // Update in database
+        if (isOffered) {
+          await userProvider.updateField('skillsOffered', currentSkills);
+        } else {
+          await userProvider.updateField('skillsWanted', currentSkills);
+        }
+      }
+      
+      // Clear text field
+      _newSkillController.clear();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to add skill: $e')),
+      );
+    }
+  }
+  
+  // Remove a skill in real-time
+  Future<void> _removeSkill(String skill, bool isOffered) async {
+    final userProvider = Provider.of<UserDataProvider>(context, listen: false);
+    
+    try {
+      List<String> convertToStringList(dynamic data) {
+        if (data == null) return [];
+        
+        if (data is String) {
+          return [data];
+        } else if (data is List) {
+          return data.map((item) => item.toString()).toList();
+        } else {
+          return [];
+        }
+      }
+      
+      // Get current skills
+      List<String> currentSkills = isOffered 
+        ? convertToStringList(widget.userData['skillsOffered'])
+        : convertToStringList(widget.userData['skillsWanted']);
+      
+      // Remove the skill
+      currentSkills.remove(skill);
+      
+      // Update in database
+      if (isOffered) {
+        await userProvider.updateField('skillsOffered', currentSkills);
+      } else {
+        await userProvider.updateField('skillsWanted', currentSkills);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to remove skill: $e')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -387,9 +646,57 @@ class _SkillsTabView extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             _buildSkillPills(
-              userData['skillsOffered'] ?? [],
+              widget.userData['skillsOffered'] ?? [],
               Theme.of(context).colorScheme.primary,
+              true,
             ),
+            const SizedBox(height: 16),
+            
+            // Add skill form
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _newSkillController,
+                    decoration: InputDecoration(
+                      hintText: 'Add a new skill...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: () {
+                    _addSkill(_newSkillController.text.trim(), _addingOfferedSkill);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(_addingOfferedSkill ? 'Add to Offered' : 'Add to Wanted'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // Toggle button to switch between adding to offered or wanted
+            Center(
+              child: TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _addingOfferedSkill = !_addingOfferedSkill;
+                  });
+                },
+                icon: Icon(_addingOfferedSkill 
+                  ? Icons.swap_vertical_circle 
+                  : Icons.swap_vertical_circle_outlined),
+                label: Text('Switch to ${_addingOfferedSkill ? 'Wanted' : 'Offered'} Skills'),
+              ),
+            ),
+            
             const SizedBox(height: 24),
             const Text(
               'Skills I\'m Looking For',
@@ -400,8 +707,9 @@ class _SkillsTabView extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             _buildSkillPills(
-              userData['skillsWanted'] ?? [],
+              widget.userData['skillsWanted'] ?? [],
               Theme.of(context).colorScheme.secondary,
+              false,
             ),
           ],
         ),
@@ -409,7 +717,7 @@ class _SkillsTabView extends StatelessWidget {
     );
   }
 
-  Widget _buildSkillPills(dynamic skills, Color color) {
+  Widget _buildSkillPills(dynamic skills, Color color, bool isOffered) {
     // Safe conversion from any type to List<String>
     List<String> convertToStringList(dynamic data) {
       if (data == null) return [];
@@ -442,6 +750,8 @@ class _SkillsTabView extends StatelessWidget {
         label: Text(skill),
         backgroundColor: color.withOpacity(0.2),
         labelStyle: TextStyle(color: color.withOpacity(0.8)),
+        deleteIcon: const Icon(Icons.cancel, size: 18),
+        onDeleted: () => _removeSkill(skill, isOffered),
       )).toList(),
     );
   }
@@ -469,7 +779,8 @@ class _SettingsTabView extends StatelessWidget {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(builder: (context) => const ProfileSetupPage())
-                ).then((_) => Provider.of<UserDataProvider>(context, listen: false).refreshUserData());
+                );
+                // No need to manually refresh as we're using real-time listeners now
               },
             ),
             const SizedBox(height: 16),
@@ -482,7 +793,8 @@ class _SettingsTabView extends StatelessWidget {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(builder: (context) => const NotificationSettingsPage())
-                ).then((_) => Provider.of<UserDataProvider>(context, listen: false).refreshUserData());
+                );
+                // No need to manually refresh, using real-time listeners
               },
             ),
             const SizedBox(height: 16),
@@ -495,7 +807,8 @@ class _SettingsTabView extends StatelessWidget {
                 Navigator.push(
                   context, 
                   MaterialPageRoute(builder: (context) => const PrivacySettingsPage())
-                ).then((_) => Provider.of<UserDataProvider>(context, listen: false).refreshUserData());
+                );
+                // No need to manually refresh, using real-time listeners
               },
             ),
             const SizedBox(height: 16),

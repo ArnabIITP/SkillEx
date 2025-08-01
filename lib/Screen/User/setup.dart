@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import '../../providers/app_state.dart';
+import '../../providers/user_data_provider.dart';
 import '../../models/user_model.dart';
 
 class ProfileSetupPage extends StatefulWidget {
@@ -86,6 +87,7 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
 
     try {
       final appState = Provider.of<AppState>(context, listen: false);
+      final userDataProvider = Provider.of<UserDataProvider>(context, listen: false);
       final currentUser = appState.currentUser;
       
       if (currentUser != null) {
@@ -115,8 +117,17 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
           isAdmin: currentUser.isAdmin,
         );
         
-        // Update the user profile
+        // Update the user profile in AppState (existing method)
         await appState.updateUserProfile(updatedUser);
+        
+        // Also update in UserDataProvider for real-time sync
+        await userDataProvider.updateUserProfile(
+          name: _nameController.text,
+          bio: _bioController.text,
+          skillsOffered: skillsOffered,
+          skillsWanted: skillsWanted,
+          availability: availabilityDays,
+        );
 
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
