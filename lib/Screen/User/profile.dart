@@ -103,10 +103,10 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
     final difference = now.difference(date);
     final days = difference.inDays;
     
-    // Calculate duration in the most appropriate unit
+    // Always display in days, even for new members
     if (days < 1) {
-      final hours = difference.inHours;
-      return '$hours hour${hours != 1 ? 's' : ''}';
+      // New members less than a day old will show as "0 days"
+      return '0 days';
     } else if (days < 30) {
       return '$days day${days != 1 ? 's' : ''}';
     } else if (days < 365) {
