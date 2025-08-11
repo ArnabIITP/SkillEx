@@ -188,33 +188,44 @@ class _ChatPageState extends State<ChatPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF6F6FB),
       appBar: AppBar(
+        elevation: 1,
+        backgroundColor: Colors.white,
+        titleSpacing: 0,
         title: Row(
           children: [
             CachedNetworkImage(
               imageUrl: widget.otherUserPhoto,
               imageBuilder: (context, imageProvider) => CircleAvatar(
-                radius: 18,
+                radius: 20,
                 backgroundImage: imageProvider,
               ),
               placeholder: (context, url) => CircleAvatar(
-                radius: 18,
+                radius: 20,
                 backgroundColor: Colors.grey[300],
-                child: const Icon(Icons.person, size: 18, color: Colors.grey),
+                child: const Icon(Icons.person, size: 20, color: Colors.grey),
               ),
               errorWidget: (context, url, error) => CircleAvatar(
-                radius: 18,
+                radius: 20,
                 backgroundColor: Colors.grey[300],
-                child: const Icon(Icons.person, size: 18, color: Colors.grey),
+                child: const Icon(Icons.person, size: 20, color: Colors.grey),
               ),
             ),
-            const SizedBox(width: 12),
-            Text(widget.otherUserName),
+            const SizedBox(width: 14),
+            Text(
+              widget.otherUserName,
+              style: const TextStyle(
+                color: Color(0xFF2D2D2D),
+                fontWeight: FontWeight.w700,
+                fontSize: 18,
+              ),
+            ),
           ],
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.star_rate),
+            icon: const Icon(Icons.star_rate, color: Color(0xFF6246EA)),
             tooltip: 'Rate this user',
             onPressed: () {
               setState(() {
@@ -226,10 +237,8 @@ class _ChatPageState extends State<ChatPage> {
       ),
       body: Column(
         children: [
-          // Rating Dialog
           if (_showRatingDialog)
             _buildRatingDialog(),
-            
           // Messages
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
@@ -243,31 +252,24 @@ class _ChatPageState extends State<ChatPage> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return const Center(
                     child: Text('No messages yet. Start a conversation!'),
                   );
                 }
-
                 final messages = snapshot.data!.docs;
-                
-                // Scroll to bottom when messages are loaded
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   _scrollToBottom();
                 });
-
                 return ListView.builder(
                   controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final message = messages[index].data() as Map<String, dynamic>;
                     final senderId = message['senderId'] as String;
                     final isCurrentUser = senderId == currentUser?.uid;
                     final messageType = message['type'] as String? ?? 'text';
-                    
-                    // Handle different message types
                     if (messageType == 'system' || messageType == 'rating') {
                       return _buildSystemMessage(message);
                     } else {
@@ -278,16 +280,15 @@ class _ChatPageState extends State<ChatPage> {
               },
             ),
           ),
-          
           // Message Input
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
             decoration: BoxDecoration(
               color: Colors.white,
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.2),
-                  blurRadius: 4,
+                  color: Colors.grey.withOpacity(0.13),
+                  blurRadius: 8,
                   offset: const Offset(0, -2),
                 ),
               ],
@@ -300,21 +301,36 @@ class _ChatPageState extends State<ChatPage> {
                       controller: _messageController,
                       decoration: InputDecoration(
                         hintText: 'Type a message...',
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(30),
+                          borderRadius: BorderRadius.circular(28),
                           borderSide: BorderSide.none,
                         ),
                         filled: true,
-                        fillColor: Colors.grey[100],
+                        fillColor: const Color(0xFFF6F6FB),
                       ),
+                      style: const TextStyle(fontSize: 15),
                       textCapitalization: TextCapitalization.sentences,
                       onSubmitted: (_) => _sendMessage(),
                     ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.send, color: Colors.indigo),
-                    onPressed: _sendMessage,
+                  const SizedBox(width: 6),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6246EA),
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.07),
+                          blurRadius: 2,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.send, color: Colors.white),
+                      onPressed: _sendMessage,
+                    ),
                   ),
                 ],
               ),
@@ -336,29 +352,46 @@ class _ChatPageState extends State<ChatPage> {
       alignment: isCurrentUser ? Alignment.centerRight : Alignment.centerLeft,
       child: ConstrainedBox(
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.75,
+          maxWidth: MediaQuery.of(context).size.width * 0.72,
         ),
-        child: Card(
-          color: isCurrentUser ? Colors.indigo.shade100 : Colors.white,
-          elevation: 1,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Container(
           margin: const EdgeInsets.symmetric(vertical: 4),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(text),
-                const SizedBox(height: 4),
-                Text(
-                  time,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          decoration: BoxDecoration(
+            color: isCurrentUser ? const Color(0xFF6246EA).withOpacity(0.13) : Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(isCurrentUser ? 16 : 4),
+              topRight: Radius.circular(isCurrentUser ? 4 : 16),
+              bottomLeft: const Radius.circular(16),
+              bottomRight: const Radius.circular(16),
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 2,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                text,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: isCurrentUser ? const Color(0xFF2D2D2D) : Colors.black87,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                time,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
           ),
         ),
       ),
@@ -420,23 +453,36 @@ class _ChatPageState extends State<ChatPage> {
   
   Widget _buildRatingDialog() {
     return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               const Text(
                 'Rate Your Experience',
                 style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 19,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFF2D2D2D),
                 ),
               ),
               const Spacer(),
               IconButton(
-                icon: const Icon(Icons.close),
+                icon: const Icon(Icons.close, color: Colors.grey),
                 onPressed: () {
                   setState(() {
                     _showRatingDialog = false;
@@ -445,41 +491,58 @@ class _ChatPageState extends State<ChatPage> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Text(
             'How was your skill exchange with ${widget.otherUserName}?',
             textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 15, color: Colors.black87),
           ),
-          const SizedBox(height: 16),
-          RatingBar.builder(
-            initialRating: _rating,
-            minRating: 1,
-            direction: Axis.horizontal,
-            allowHalfRating: true,
-            itemCount: 5,
-            itemBuilder: (context, _) => const Icon(
-              Icons.star,
-              color: Colors.amber,
+          const SizedBox(height: 18),
+          Center(
+            child: RatingBar.builder(
+              initialRating: _rating,
+              minRating: 1,
+              direction: Axis.horizontal,
+              allowHalfRating: true,
+              itemCount: 5,
+              itemBuilder: (context, _) => const Icon(
+                Icons.star,
+                color: Colors.amber,
+              ),
+              onRatingUpdate: (rating) {
+                setState(() {
+                  _rating = rating;
+                });
+              },
             ),
-            onRatingUpdate: (rating) {
-              setState(() {
-                _rating = rating;
-              });
-            },
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           TextField(
             controller: _reviewController,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               hintText: 'Write a review (optional)',
-              border: OutlineInputBorder(),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             ),
             maxLines: 3,
+            style: const TextStyle(fontSize: 14),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6246EA),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                textStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
               onPressed: _submitRating,
               child: const Text('Submit Rating'),
             ),

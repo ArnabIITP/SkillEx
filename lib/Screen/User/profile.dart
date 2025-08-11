@@ -7,7 +7,7 @@ import 'package:untitled/Screen/User/setup.dart';
 import 'package:untitled/Screen/User/notification_settings.dart';
 import 'package:untitled/Screen/User/privacy_settings.dart';
 import 'package:untitled/providers/user_data_provider.dart';
-import '../Admin/Admin.dart'; // Ensure correct path to AdminPage
+import '../Admin/Admin.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -18,43 +18,32 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    
-    // Make sure the provider is initialized and refreshed
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final userProvider = Provider.of<UserDataProvider>(context, listen: false);
-      
-      // Refresh data from database to ensure it's up-to-date
       userProvider.refreshUserData();
-      
-      // Set up a periodic refresh to keep duration calculations up-to-date
       Timer.periodic(const Duration(minutes: 1), (timer) {
         if (mounted) {
-          setState(() {
-            // This triggers a rebuild to update membership duration in real-time
-          });
+          setState(() {});
         } else {
           timer.cancel();
         }
       });
     });
   }
-  
+
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
   }
 
-  // Helper method to get membership duration - calculated in real-time
-  // Format timestamp for display
   String _formatTimestamp(dynamic timestamp) {
     if (timestamp == null) return 'Unknown';
-    
     DateTime date;
     if (timestamp is DateTime) {
       date = timestamp;
@@ -63,12 +52,8 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
     } else {
       return 'Unknown';
     }
-    
-    // Calculate the difference from now
     final now = DateTime.now();
     final difference = now.difference(date);
-    
-    // Format based on how recent
     if (difference.inMinutes < 1) {
       return 'Just now';
     } else if (difference.inHours < 1) {
@@ -81,14 +66,12 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
       final days = difference.inDays;
       return '$days day${days != 1 ? 's' : ''} ago';
     } else {
-      // Format as date for older updates
       return '${date.day}/${date.month}/${date.year}';
     }
   }
 
   String _getMembershipDuration(dynamic memberSince) {
     if (memberSince == null) return '0 days';
-    
     DateTime date;
     if (memberSince is DateTime) {
       date = memberSince;
@@ -97,15 +80,10 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
     } else {
       return '0 days';
     }
-    
-    // Use current time to always calculate real-time duration
     final now = DateTime.now();
     final difference = now.difference(date);
     final days = difference.inDays;
-    
-    // Always display in days, even for new members
     if (days < 1) {
-      // New members less than a day old will show as "0 days"
       return '0 days';
     } else if (days < 30) {
       return '$days day${days != 1 ? 's' : ''}';
@@ -125,16 +103,13 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-
+    final colorScheme = Theme.of(context).colorScheme;
     return Consumer<UserDataProvider>(
       builder: (context, userDataProvider, _) {
         final isLoading = userDataProvider.isLoading;
         final userData = userDataProvider.userData;
-        
-        // This will automatically update when data changes in Firestore
-        // No need to manually refresh
-
         return Scaffold(
+          backgroundColor: const Color(0xFFF6F6FB),
           body: user == null
               ? const Center(child: Text("No user logged in"))
               : isLoading
@@ -143,14 +118,18 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                       ? const Center(child: Text("Failed to load profile"))
                       : Column(
                           children: [
-                            // Fixed portion of the screen
                             Container(
-                              color: const Color(0xFF6246EA),
+                              decoration: const BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [Color(0xFF6246EA), Color(0xFFB8B5F8)],
+                                ),
+                              ),
                               child: SafeArea(
                                 bottom: false,
                                 child: Column(
                                   children: [
-                                    // App Bar-like header
                                     Padding(
                                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                                       child: Row(
@@ -160,30 +139,27 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                                             'My Profile',
                                             style: TextStyle(
                                               color: Colors.white,
-                                              fontSize: 24,
+                                              fontSize: 26,
                                               fontWeight: FontWeight.bold,
                                             ),
                                           ),
                                           IconButton(
                                             icon: const Icon(Icons.settings, color: Colors.white),
                                             onPressed: () {
-                                              _tabController.animateTo(2); // Switch to settings tab
+                                              _tabController.animateTo(2);
                                             },
                                           ),
                                         ],
                                       ),
                                     ),
-                                    
-                                    // Profile header - real-time data
                                     Padding(
                                       padding: const EdgeInsets.only(top: 16, left: 16, right: 16),
                                       child: Row(
                                         children: [
-                                          // Avatar with real-time name initial
                                           Hero(
                                             tag: 'profile_avatar',
                                             child: CircleAvatar(
-                                              radius: 40,
+                                              radius: 44,
                                               backgroundColor: Colors.white,
                                               child: AnimatedSwitcher(
                                                 duration: const Duration(milliseconds: 300),
@@ -193,20 +169,19 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                                                     : 'A',
                                                   key: ValueKey(userData['name']),
                                                   style: TextStyle(
-                                                    fontSize: 32,
+                                                    fontSize: 36,
                                                     fontWeight: FontWeight.bold,
-                                                    color: Theme.of(context).primaryColor,
+                                                    color: colorScheme.primary,
                                                   ),
                                                 ),
                                               ),
                                             ),
                                           ),
-                                          const SizedBox(width: 16),
+                                          const SizedBox(width: 18),
                                           Expanded(
                                             child: Column(
                                               crossAxisAlignment: CrossAxisAlignment.start,
                                               children: [
-                                                // Animated name transition for real-time updates
                                                 AnimatedSwitcher(
                                                   duration: const Duration(milliseconds: 300),
                                                   child: Text(
@@ -214,20 +189,18 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                                                     key: ValueKey(userData['name']),
                                                     style: const TextStyle(
                                                       color: Colors.white,
-                                                      fontSize: 24,
+                                                      fontSize: 25,
                                                       fontWeight: FontWeight.bold,
                                                     ),
                                                   ),
                                                 ),
-                                                // Email from Firebase Auth - always real-time
                                                 Text(
                                                   user.email ?? 'No email',
                                                   style: const TextStyle(
                                                     color: Colors.white70,
-                                                    fontSize: 14,
+                                                    fontSize: 15,
                                                   ),
                                                 ),
-                                                // Last update timestamp
                                                 if (userData['lastUpdated'] != null)
                                                   Text(
                                                     'Last updated: ${_formatTimestamp(userData['lastUpdated'])}',
@@ -243,21 +216,19 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                                         ],
                                       ),
                                     ),
-                                    const SizedBox(height: 16),
+                                    const SizedBox(height: 18),
                                   ],
                                 ),
                               ),
                             ),
-                            // Stats Cards - Real-time updates
                             Padding(
-                              padding: const EdgeInsets.all(8.0),
+                              padding: const EdgeInsets.all(10.0),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                                 children: [
                                   Expanded(
                                     child: _buildStatCard(
                                       label: 'RATING',
-                                      // Format to one decimal place
                                       value: (userData['rating'] ?? 0.0) is double 
                                           ? (userData['rating'] as double).toStringAsFixed(1)
                                           : (userData['rating'] ?? 0.0).toString(),
@@ -265,18 +236,19 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                                       iconColor: Colors.amber,
                                     ),
                                   ),
+                                  const SizedBox(width: 10),
                                   Expanded(
                                     child: _buildStatCard(
                                       label: 'SWAPS',
                                       value: (userData['completedSwaps'] ?? 0).toString(),
                                       icon: Icons.swap_horiz,
-                                      iconColor: Theme.of(context).primaryColor,
+                                      iconColor: colorScheme.primary,
                                     ),
                                   ),
+                                  const SizedBox(width: 10),
                                   Expanded(
                                     child: _buildStatCard(
                                       label: 'MEMBER FOR',
-                                      // Calculate in real-time on every build
                                       value: _getMembershipDuration(userData['memberSince']),
                                       icon: Icons.calendar_month,
                                       iconColor: Colors.green,
@@ -285,19 +257,32 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
                                 ],
                               ),
                             ),
-                            // Tab Bar
-                            TabBar(
-                              controller: _tabController,
-                              labelColor: Theme.of(context).primaryColor,
-                              unselectedLabelColor: Colors.grey,
-                              indicatorColor: Theme.of(context).primaryColor,
-                              tabs: const [
-                                Tab(text: 'About', icon: Icon(Icons.person)),
-                                Tab(text: 'Skills', icon: Icon(Icons.lightbulb)),
-                                Tab(text: 'Settings', icon: Icon(Icons.settings)),
-                              ],
+                            Container(
+                              margin: const EdgeInsets.symmetric(horizontal: 16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(25),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 5),
+                                  ),
+                                ],
+                              ),
+                              child: TabBar(
+                                controller: _tabController,
+                                labelColor: colorScheme.primary,
+                                unselectedLabelColor: Colors.grey,
+                                indicatorColor: colorScheme.primary,
+                                tabs: const [
+                                  Tab(text: 'About', icon: Icon(Icons.person)),
+                                  Tab(text: 'Skills', icon: Icon(Icons.lightbulb)),
+                                  Tab(text: 'Settings', icon: Icon(Icons.settings)),
+                                ],
+                              ),
                             ),
-                            // Expand to fill the remaining space
+                            const SizedBox(height: 10),
                             Expanded(
                               child: TabBarView(
                                 controller: _tabController,
@@ -315,7 +300,6 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
     );
   }
 
-  // Build a card for showing a statistic - real-time updates
   Widget _buildStatCard({
     required String label,
     required String value,
@@ -323,32 +307,25 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
     required Color iconColor,
   }) {
     return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(18.0),
         child: Column(
           children: [
-            Icon(icon, color: iconColor, size: 28),
+            Icon(icon, color: iconColor, size: 30),
             const SizedBox(height: 8),
-            // Animated value to show transitions for real-time updates
             TweenAnimationBuilder<double>(
               duration: const Duration(milliseconds: 500),
-              tween: Tween<double>(
-                begin: 0,
-                end: 1,
-              ),
+              tween: Tween<double>(begin: 0, end: 1),
               builder: (context, value, child) {
-                return Opacity(
-                  opacity: value,
-                  child: child,
-                );
+                return Opacity(opacity: value, child: child);
               },
               child: Text(
                 value,
-                key: ValueKey(value), // Key based on value for proper rebuilding
+                key: ValueKey(value),
                 style: const TextStyle(
-                  fontSize: 20,
+                  fontSize: 22,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -357,8 +334,9 @@ class _ProfilePageState extends State<ProfilePage> with SingleTickerProviderStat
             Text(
               label,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 13,
                 color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
@@ -393,7 +371,6 @@ class _AboutTabViewState extends State<_AboutTabView> {
     super.dispose();
   }
 
-  // Update bio in real-time
   Future<void> _saveBio() async {
     final userProvider = Provider.of<UserDataProvider>(context, listen: false);
     
@@ -407,11 +384,9 @@ class _AboutTabViewState extends State<_AboutTabView> {
     }
   }
   
-  // Show availability dialog for real-time editing
   void _showAvailabilityDialog() {
     final days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     
-    // Convert to string list 
     List<String> convertToStringList(dynamic data) {
       if (data == null) return [];
       
@@ -424,15 +399,12 @@ class _AboutTabViewState extends State<_AboutTabView> {
       }
     }
     
-    // Get current availability
     final List<String> currentAvailability = convertToStringList(widget.userData['availability']);
     
-    // Create a map of day selections
     final Map<String, bool> selections = {
       for (var day in days) day: currentAvailability.contains(day)
     };
     
-    // Use a StatefulBuilder to manage dialog state
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -464,12 +436,10 @@ class _AboutTabViewState extends State<_AboutTabView> {
                 ),
                 TextButton(
                   onPressed: () async {
-                    // Get selected days
                     final List<String> updatedAvailability = days
                         .where((day) => selections[day] == true)
                         .toList();
                     
-                    // Update in database
                     try {
                       final userProvider = Provider.of<UserDataProvider>(context, listen: false);
                       await userProvider.updateField('availability', updatedAvailability);
@@ -492,7 +462,6 @@ class _AboutTabViewState extends State<_AboutTabView> {
 
   @override
   Widget build(BuildContext context) {
-    // Update controller text if userData changes
     if (!_isEditing && widget.userData['bio'] != _bioController.text) {
       _bioController.text = widget.userData['bio']?.toString() ?? '';
     }
@@ -572,25 +541,20 @@ class _AboutTabViewState extends State<_AboutTabView> {
   }
   
   Widget _buildAvailabilitySchedule() {
-    // Safe conversion from any type to List<String>
     List<String> convertToStringList(dynamic data) {
       if (data == null) return [];
       
       if (data is String) {
-        // If it's a single string, wrap it in a list
         return [data];
       } else if (data is List) {
-        // If it's already a list, convert each element to String
         return data.map((item) => item.toString()).toList();
       } else {
-        // For any other type, return empty list
         return [];
       }
     }
     
     final List<String> availabilityList = convertToStringList(widget.userData['availability']);
     
-    // Get the current day of the week
     final now = DateTime.now();
     final currentDay = _getDayName(now.weekday);
     
@@ -601,7 +565,6 @@ class _AboutTabViewState extends State<_AboutTabView> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Column(
         children: [
-          // Current day status
           Container(
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
@@ -641,9 +604,7 @@ class _AboutTabViewState extends State<_AboutTabView> {
               ],
             ),
           ),
-          // Divider
           Divider(height: 1, thickness: 1, color: Colors.grey.withOpacity(0.2)),
-          // Weekly schedule
           Padding(
             padding: const EdgeInsets.all(12.0),
             child: Column(
@@ -679,7 +640,6 @@ class _AboutTabViewState extends State<_AboutTabView> {
     );
   }
   
-  // Helper method to get day name from weekday number
   String _getDayName(int weekday) {
     switch (weekday) {
       case 1: return 'Monday';
@@ -713,7 +673,6 @@ class _SkillsTabViewState extends State<_SkillsTabView> {
     super.dispose();
   }
 
-  // Add a skill in real-time to the database
   Future<void> _addSkill(String skill, bool isOffered) async {
     if (skill.isEmpty) return;
     
@@ -732,16 +691,13 @@ class _SkillsTabViewState extends State<_SkillsTabView> {
         }
       }
       
-      // Get current skills
       List<String> currentSkills = isOffered 
         ? convertToStringList(widget.userData['skillsOffered'])
         : convertToStringList(widget.userData['skillsWanted']);
       
-      // Add new skill if not already present
       if (!currentSkills.contains(skill)) {
         currentSkills.add(skill);
         
-        // Update in database
         if (isOffered) {
           await userProvider.updateField('skillsOffered', currentSkills);
         } else {
@@ -749,7 +705,6 @@ class _SkillsTabViewState extends State<_SkillsTabView> {
         }
       }
       
-      // Clear text field
       _newSkillController.clear();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -758,7 +713,6 @@ class _SkillsTabViewState extends State<_SkillsTabView> {
     }
   }
   
-  // Remove a skill in real-time
   Future<void> _removeSkill(String skill, bool isOffered) async {
     final userProvider = Provider.of<UserDataProvider>(context, listen: false);
     
@@ -775,15 +729,12 @@ class _SkillsTabViewState extends State<_SkillsTabView> {
         }
       }
       
-      // Get current skills
       List<String> currentSkills = isOffered 
         ? convertToStringList(widget.userData['skillsOffered'])
         : convertToStringList(widget.userData['skillsWanted']);
       
-      // Remove the skill
       currentSkills.remove(skill);
       
-      // Update in database
       if (isOffered) {
         await userProvider.updateField('skillsOffered', currentSkills);
       } else {
@@ -819,7 +770,6 @@ class _SkillsTabViewState extends State<_SkillsTabView> {
             ),
             const SizedBox(height: 16),
             
-            // Add skill form
             Row(
               children: [
                 Expanded(
@@ -849,7 +799,6 @@ class _SkillsTabViewState extends State<_SkillsTabView> {
               ],
             ),
             const SizedBox(height: 8),
-            // Toggle button to switch between adding to offered or wanted
             Center(
               child: TextButton.icon(
                 onPressed: () {
@@ -885,18 +834,14 @@ class _SkillsTabViewState extends State<_SkillsTabView> {
   }
 
   Widget _buildSkillPills(dynamic skills, Color color, bool isOffered) {
-    // Safe conversion from any type to List<String>
     List<String> convertToStringList(dynamic data) {
       if (data == null) return [];
       
       if (data is String) {
-        // If it's a single string, wrap it in a list
         return [data];
       } else if (data is List) {
-        // If it's already a list, convert each element to String
         return data.map((item) => item.toString()).toList();
       } else {
-        // For any other type, return empty list
         return [];
       }
     }
@@ -947,7 +892,6 @@ class _SettingsTabView extends StatelessWidget {
                   context, 
                   MaterialPageRoute(builder: (context) => const ProfileSetupPage())
                 );
-                // No need to manually refresh as we're using real-time listeners now
               },
             ),
             const SizedBox(height: 16),
@@ -961,7 +905,6 @@ class _SettingsTabView extends StatelessWidget {
                   context, 
                   MaterialPageRoute(builder: (context) => const NotificationSettingsPage())
                 );
-                // No need to manually refresh, using real-time listeners
               },
             ),
             const SizedBox(height: 16),
@@ -975,11 +918,9 @@ class _SettingsTabView extends StatelessWidget {
                   context, 
                   MaterialPageRoute(builder: (context) => const PrivacySettingsPage())
                 );
-                // No need to manually refresh, using real-time listeners
               },
             ),
             const SizedBox(height: 16),
-            // Always show admin panel button (you can adjust this condition as needed)
             _buildSettingsButton(
               context,
               icon: Icons.admin_panel_settings,

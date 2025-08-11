@@ -119,18 +119,38 @@ class _RequestPageState extends State<RequestPage> with SingleTickerProviderStat
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF6F6FB),
       appBar: AppBar(
-        title: const Text("My Connections", style: TextStyle(fontWeight: FontWeight.bold)),
-        elevation: 0,
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: Colors.white,
-          indicatorColor: Colors.white,
-          indicatorWeight: 3,
-          tabs: const [
-            Tab(text: "REQUESTS"),
-            Tab(text: "CHATS"),
-          ],
+        elevation: 2,
+        backgroundColor: Colors.white,
+        title: const Text(
+          "My Connections",
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF2D2D2D),
+            fontSize: 22,
+            letterSpacing: 0.2,
+          ),
+        ),
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(54),
+          child: Container(
+            color: Colors.white,
+            child: TabBar(
+              controller: _tabController,
+              labelColor: const Color(0xFF6246EA),
+              unselectedLabelColor: Colors.grey,
+              indicator: UnderlineTabIndicator(
+                borderSide: const BorderSide(width: 4.0, color: Color(0xFF6246EA)),
+                insets: const EdgeInsets.symmetric(horizontal: 32.0),
+              ),
+              labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              tabs: const [
+                Tab(text: "REQUESTS"),
+                Tab(text: "CHATS"),
+              ],
+            ),
+          ),
         ),
       ),
       body: currentUserId.isEmpty
@@ -180,11 +200,12 @@ class _RequestPageState extends State<RequestPage> with SingleTickerProviderStat
                 : 'Recently';
 
             return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              elevation: 2,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              margin: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              elevation: 4,
+              shadowColor: Colors.black12,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
               child: Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -193,21 +214,21 @@ class _RequestPageState extends State<RequestPage> with SingleTickerProviderStat
                         CachedNetworkImage(
                           imageUrl: data["fromPhoto"] ?? "",
                           imageBuilder: (context, imageProvider) => CircleAvatar(
-                            radius: 30,
+                            radius: 32,
                             backgroundImage: imageProvider,
                           ),
                           placeholder: (context, url) => CircleAvatar(
-                            radius: 30,
+                            radius: 32,
                             backgroundColor: Colors.grey[300],
-                            child: const Icon(Icons.person, size: 30, color: Colors.grey),
+                            child: const Icon(Icons.person, size: 32, color: Colors.grey),
                           ),
                           errorWidget: (context, url, error) => CircleAvatar(
-                            radius: 30,
+                            radius: 32,
                             backgroundColor: Colors.grey[300],
-                            child: const Icon(Icons.person, size: 30, color: Colors.grey),
+                            child: const Icon(Icons.person, size: 32, color: Colors.grey),
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        const SizedBox(width: 18),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -215,15 +236,17 @@ class _RequestPageState extends State<RequestPage> with SingleTickerProviderStat
                               Text(
                                 data["fromName"] ?? "User",
                                 style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF2D2D2D),
                                 ),
                               ),
+                              const SizedBox(height: 2),
                               Text(
                                 formattedDate,
                                 style: TextStyle(
                                   color: Colors.grey[600],
-                                  fontSize: 12,
+                                  fontSize: 13,
                                 ),
                               ),
                             ],
@@ -231,38 +254,43 @@ class _RequestPageState extends State<RequestPage> with SingleTickerProviderStat
                         ),
                       ],
                     ),
-                    const Divider(height: 24),
+                    const SizedBox(height: 14),
+                    Divider(height: 1, color: Colors.grey[200]),
+                    const SizedBox(height: 14),
                     _buildSkillItem("Offers", data["skillsOffered"], Icons.auto_fix_high),
                     const SizedBox(height: 8),
                     _buildSkillItem("Wants", data["skillsWanted"], Icons.search),
                     const SizedBox(height: 8),
                     _buildSkillItem("Available", data["availability"], Icons.access_time),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 18),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         OutlinedButton.icon(
                           onPressed: () => _rejectRequest(docId),
                           icon: const Icon(Icons.close, color: Colors.red),
-                          label: const Text('Decline', style: TextStyle(color: Colors.red)),
+                          label: const Text('Decline', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600)),
                           style: OutlinedButton.styleFrom(
                             side: const BorderSide(color: Colors.red),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
+                              borderRadius: BorderRadius.circular(22),
                             ),
+                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
                           ),
                         ),
                         const SizedBox(width: 16),
                         ElevatedButton.icon(
                           onPressed: () => _acceptRequest(docId, data),
                           icon: const Icon(Icons.check),
-                          label: const Text('Accept'),
+                          label: const Text('Accept', style: TextStyle(fontWeight: FontWeight.w600)),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
+                            backgroundColor: const Color(0xFF6246EA),
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
+                              borderRadius: BorderRadius.circular(22),
                             ),
+                            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                            elevation: 0,
                           ),
                         ),
                       ],
@@ -330,33 +358,34 @@ class _RequestPageState extends State<RequestPage> with SingleTickerProviderStat
             final unreadCount = (data['unreadCount'] as Map<String, dynamic>?)?[currentUserId] ?? 0;
 
             return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              elevation: 1,
+              margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              elevation: 2,
+              shadowColor: Colors.black12,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
               ),
               child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                 leading: CachedNetworkImage(
                   imageUrl: otherUserPhoto,
                   imageBuilder: (context, imageProvider) => CircleAvatar(
-                    radius: 24,
+                    radius: 26,
                     backgroundImage: imageProvider,
                   ),
                   placeholder: (context, url) => CircleAvatar(
-                    radius: 24,
+                    radius: 26,
                     backgroundColor: Colors.grey[300],
                     child: const Icon(Icons.person, color: Colors.grey),
                   ),
                   errorWidget: (context, url, error) => CircleAvatar(
-                    radius: 24,
+                    radius: 26,
                     backgroundColor: Colors.grey[300],
                     child: const Icon(Icons.person, color: Colors.grey),
                   ),
                 ),
                 title: Text(
                   otherUserName,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17, color: Color(0xFF2D2D2D)),
                 ),
                 subtitle: Row(
                   children: [
@@ -366,31 +395,42 @@ class _RequestPageState extends State<RequestPage> with SingleTickerProviderStat
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                          color: unreadCount > 0 ? Colors.black87 : Colors.grey[600],
+                          color: unreadCount > 0 ? const Color(0xFF6246EA) : Colors.grey[700],
                           fontWeight: unreadCount > 0 ? FontWeight.bold : FontWeight.normal,
+                          fontSize: 14,
                         ),
                       ),
                     ),
-                    if (formattedTime.isNotEmpty) 
-                      Text(
-                        formattedTime,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
+                    if (formattedTime.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8.0),
+                        child: Text(
+                          formattedTime,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[500],
+                          ),
                         ),
                       ),
                   ],
                 ),
                 trailing: unreadCount > 0
                     ? Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: const BoxDecoration(
-                          color: Colors.indigo,
+                        padding: const EdgeInsets.all(7),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6246EA),
                           shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.08),
+                              blurRadius: 2,
+                              offset: const Offset(0, 1),
+                            ),
+                          ],
                         ),
                         child: Text(
                           unreadCount.toString(),
-                          style: const TextStyle(color: Colors.white, fontSize: 12),
+                          style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
                         ),
                       )
                     : null,

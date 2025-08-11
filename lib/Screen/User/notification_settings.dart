@@ -93,120 +93,128 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF6F6FB),
       appBar: AppBar(
-        title: const Text('Notification Settings'),
-        backgroundColor: const Color(0xFF6246EA),
-        foregroundColor: Colors.white,
-        elevation: 0,
+        title: const Text('Notification Settings', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22)),
+        backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF6246EA),
+        elevation: 1.5,
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: Color(0xFF6246EA)),
       ),
-      body: _isLoading 
-        ? const Center(child: CircularProgressIndicator())
-        : ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              const SizedBox(height: 8),
-              _buildInfoCard(),
-              const SizedBox(height: 24),
-              _buildSettingSwitch(
-                title: 'New Matches', 
-                subtitle: 'Get notified when you match with someone',
-                value: _notificationSettings['newMatches'],
-                onChanged: (value) {
-                  setState(() {
-                    _notificationSettings['newMatches'] = value;
-                  });
-                },
-              ),
-              _buildDivider(),
-              _buildSettingSwitch(
-                title: 'Messages', 
-                subtitle: 'Receive notifications for new messages',
-                value: _notificationSettings['messages'],
-                onChanged: (value) {
-                  setState(() {
-                    _notificationSettings['messages'] = value;
-                  });
-                },
-              ),
-              _buildDivider(),
-              _buildSettingSwitch(
-                title: 'Skill Requests', 
-                subtitle: 'Get notified when someone requests your skills',
-                value: _notificationSettings['skillRequests'],
-                onChanged: (value) {
-                  setState(() {
-                    _notificationSettings['skillRequests'] = value;
-                  });
-                },
-              ),
-              _buildDivider(),
-              _buildSettingSwitch(
-                title: 'Skill Updates', 
-                subtitle: 'Get notified about new skills in your area',
-                value: _notificationSettings['skillUpdates'],
-                onChanged: (value) {
-                  setState(() {
-                    _notificationSettings['skillUpdates'] = value;
-                  });
-                },
-              ),
-              _buildDivider(),
-              _buildSettingSwitch(
-                title: 'App Updates', 
-                subtitle: 'Stay informed about new app features',
-                value: _notificationSettings['appUpdates'],
-                onChanged: (value) {
-                  setState(() {
-                    _notificationSettings['appUpdates'] = value;
-                  });
-                },
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF6246EA),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                const SizedBox(height: 8),
+                _buildInfoCard(),
+                const SizedBox(height: 28),
+                _buildSettingSwitch(
+                  title: 'New Matches',
+                  subtitle: 'Get notified when you match with someone',
+                  value: _notificationSettings['newMatches'],
+                  onChanged: (value) {
+                    setState(() {
+                      _notificationSettings['newMatches'] = value;
+                    });
+                  },
                 ),
-                onPressed: _saveNotificationSettings,
-                child: const Text('Save Changes'),
-              ),
-            ],
-          ),
+                _buildDivider(),
+                _buildSettingSwitch(
+                  title: 'Messages',
+                  subtitle: 'Receive notifications for new messages',
+                  value: _notificationSettings['messages'],
+                  onChanged: (value) {
+                    setState(() {
+                      _notificationSettings['messages'] = value;
+                    });
+                  },
+                ),
+                _buildDivider(),
+                _buildSettingSwitch(
+                  title: 'Skill Requests',
+                  subtitle: 'Get notified when someone requests your skills',
+                  value: _notificationSettings['skillRequests'],
+                  onChanged: (value) {
+                    setState(() {
+                      _notificationSettings['skillRequests'] = value;
+                    });
+                  },
+                ),
+                _buildDivider(),
+                _buildSettingSwitch(
+                  title: 'Skill Updates',
+                  subtitle: 'Get notified about new skills in your area',
+                  value: _notificationSettings['skillUpdates'],
+                  onChanged: (value) {
+                    setState(() {
+                      _notificationSettings['skillUpdates'] = value;
+                    });
+                  },
+                ),
+                _buildDivider(),
+                _buildSettingSwitch(
+                  title: 'App Updates',
+                  subtitle: 'Stay informed about new app features',
+                  value: _notificationSettings['appUpdates'],
+                  onChanged: (value) {
+                    setState(() {
+                      _notificationSettings['appUpdates'] = value;
+                    });
+                  },
+                ),
+                const SizedBox(height: 28),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6246EA),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    elevation: 0,
+                  ),
+                  onPressed: _saveNotificationSettings,
+                  child: const Text('Save Changes'),
+                ),
+              ],
+            ),
     );
   }
   
   Widget _buildInfoCard() {
     return Card(
-      elevation: 2,
+      elevation: 3,
+      shadowColor: Colors.black12,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
       ),
+      color: Colors.white,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.notifications, color: Theme.of(context).primaryColor),
-                const SizedBox(width: 8),
+                const Icon(Icons.notifications, color: Color(0xFF6246EA), size: 28),
+                const SizedBox(width: 10),
                 const Text(
                   'Notification Preferences',
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 19,
                     fontWeight: FontWeight.bold,
+                    color: Color(0xFF2D2D2D),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             const Text(
               'Control which notifications you receive from SkillEx. You can toggle each type of notification on or off.',
-              style: TextStyle(fontSize: 14),
+              style: TextStyle(fontSize: 15, color: Color(0xFF555555)),
             ),
           ],
         ),
@@ -221,7 +229,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     required ValueChanged<bool> onChanged,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         children: [
           Expanded(
@@ -232,15 +240,16 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                   title,
                   style: const TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF2D2D2D),
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 14,
-                    color: Colors.grey.shade600,
+                    color: Color(0xFF888888),
                   ),
                 ),
               ],
@@ -250,6 +259,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
             value: value,
             onChanged: onChanged,
             activeColor: const Color(0xFF6246EA),
+            inactiveTrackColor: Colors.grey.shade300,
           ),
         ],
       ),

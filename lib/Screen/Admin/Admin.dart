@@ -1,7 +1,7 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:async';
 
 class AdminPage extends StatefulWidget {
@@ -20,15 +20,20 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
   List<DocumentSnapshot> _allUsers = [];
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  
+  StreamSubscription<QuerySnapshot>? _usersSubscription;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _setupRealtimeUpdates();
     _fetchAdminStats();
+    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+    ));
   }
-  
+
   @override
   void dispose() {
     _tabController.dispose();
@@ -37,22 +42,13 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
     super.dispose();
   }
 
-  // Stream subscription for real-time updates
-  StreamSubscription<QuerySnapshot>? _usersSubscription;
-  
-  // Method to start listening to real-time updates
   void _setupRealtimeUpdates() {
-    // Cancel any existing subscription
     _usersSubscription?.cancel();
-    
-    // Set up real-time listener
     _usersSubscription = _firestore.collection('users').snapshots().listen((snapshot) {
       setState(() {
         _allUsers = snapshot.docs;
         _isLoading = false;
       });
-      
-      // Also update stats when users change
       _fetchAdminStats();
     }, onError: (e) {
       setState(() => _isLoading = false);
@@ -61,34 +57,25 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
       );
     });
   }
-  
-  // Legacy method - now just initiates loading state
+
   Future<void> _fetchAllUsers() async {
     setState(() => _isLoading = true);
-    // Real-time updates will handle the actual data loading
     _setupRealtimeUpdates();
   }
-  
+
   Future<void> _fetchAdminStats() async {
     try {
-      // Get total number of users
       final userCount = await _firestore.collection('users').count().get();
-      
-      // Get total number of swaps (assuming a swaps collection)
       final swapsCount = await _firestore.collection('swaps').count().get();
-      
-      // Get active skills (unique)
       final users = await _firestore.collection('users').get();
       Set<String> uniqueSkills = {};
       int totalSkillsOffered = 0;
-      
       for (var doc in users.docs) {
         final data = doc.data();
         final skills = List<String>.from(data['skillsOffered'] ?? []);
         uniqueSkills.addAll(skills);
         totalSkillsOffered += skills.length;
       }
-      
       setState(() {
         _stats = {
           'userCount': userCount.count,
@@ -104,19 +91,14 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
 
   Future<void> _deleteUser(String uid) async {
     try {
-      // Delete from Firestore
       await _firestore.collection('users').doc(uid).delete();
-
-      // Only delete from Auth if the admin is deleting their own account (FirebaseAuth cannot delete other users directly)
       if (_auth.currentUser?.uid == uid) {
         await _auth.currentUser!.delete();
       }
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("User deleted successfully")),
       );
-
-      _fetchAllUsers(); // Refresh list
+      _fetchAllUsers();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Failed to delete user: $e")),
@@ -153,13 +135,11 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
 
   List<DocumentSnapshot> get _filteredUsers {
     if (_searchQuery.isEmpty) return _allUsers;
-    
     return _allUsers.where((doc) {
       final data = doc.data() as Map<String, dynamic>;
       final name = (data['name'] ?? '').toString().toLowerCase();
       final email = (data['email'] ?? '').toString().toLowerCase();
       final skills = (data['skillsOffered'] as List?)?.join(" ").toLowerCase() ?? '';
-      
       final query = _searchQuery.toLowerCase();
       return name.contains(query) || email.contains(query) || skills.contains(query);
     }).toList();
@@ -168,19 +148,18 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    
     return Scaffold(
+      backgroundColor: const Color(0xFFF6F6FB),
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) => [
           SliverAppBar(
             expandedHeight: 200,
             pinned: true,
-            floating: false,
             backgroundColor: const Color(0xFF6246EA),
             flexibleSpace: FlexibleSpaceBar(
               title: const Text(
                 'Admin Dashboard',
-                style: TextStyle(fontWeight: FontWeight.bold),
+                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
               ),
               background: Stack(
                 fit: StackFit.expand,
@@ -221,10 +200,7 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
         ],
         body: Column(
           children: [
-            // Dashboard Stats Cards
             if (!_isLoading) _buildStatsSection(),
-
-            // Search bar
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: TextField(
@@ -244,14 +220,15 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(15),
                   ),
+                  filled: true,
+                  fillColor: Colors.white,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
                 ),
                 onChanged: (value) {
                   setState(() => _searchQuery = value);
                 },
               ),
             ),
-
-            // Tab Bar
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
@@ -278,10 +255,7 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                 ],
               ),
             ),
-            
             const SizedBox(height: 16),
-            
-            // Tab content
             Expanded(
               child: TabBarView(
                 controller: _tabController,
@@ -302,10 +276,12 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
           _showAddSkillDialog();
         },
         child: const Icon(Icons.add),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 6,
       ),
     );
   }
-  
+
   Widget _buildStatsSection() {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -315,7 +291,7 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
           const Text(
             'Dashboard Overview',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 20,
               fontWeight: FontWeight.bold,
               color: Color(0xFF6246EA),
             ),
@@ -369,27 +345,27 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
   }) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.symmetric(vertical: 18),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 5),
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: color, size: 28),
+            Icon(icon, color: color, size: 32),
             const SizedBox(height: 8),
             Text(
               value,
               style: TextStyle(
-                fontSize: 22,
+                fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: color,
               ),
@@ -399,7 +375,8 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
               label,
               style: TextStyle(
                 color: Colors.grey.shade600,
-                fontSize: 12,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
@@ -412,17 +389,13 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    
     if (_allUsers.isEmpty) {
       return const Center(child: Text("No users found"));
     }
-    
     final filteredUsers = _filteredUsers;
-    
     if (filteredUsers.isEmpty) {
       return const Center(child: Text("No matching users found"));
     }
-
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       itemCount: filteredUsers.length,
@@ -436,29 +409,28 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
         final photoUrl = data['photoUrl'] as String?;
         final rating = (data['rating'] ?? 0.0) as double;
         final isAdmin = (data['isAdmin'] ?? false) as bool;
-
         return Card(
-          margin: const EdgeInsets.only(bottom: 12),
+          margin: const EdgeInsets.only(bottom: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(18),
           ),
-          elevation: 3,
+          elevation: 4,
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(18),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 CircleAvatar(
-                  radius: 30,
-                  backgroundColor: const Color(0xFF6246EA).withOpacity(0.1),
+                  radius: 32,
+                  backgroundColor: const Color(0xFF6246EA).withOpacity(0.13),
                   backgroundImage: photoUrl != null && photoUrl.isNotEmpty
                       ? NetworkImage(photoUrl)
                       : null,
                   child: photoUrl == null || photoUrl.isEmpty
-                      ? const Icon(Icons.person, size: 30, color: Color(0xFF6246EA))
+                      ? const Icon(Icons.person, size: 32, color: Color(0xFF6246EA))
                       : null,
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 18),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -470,16 +442,16 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                             child: Text(
                               name,
                               style: const TextStyle(
-                                fontSize: 18,
+                                fontSize: 19,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
                           if (isAdmin)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                               decoration: BoxDecoration(
-                                color: Colors.purple.withOpacity(0.1),
+                                color: Colors.purple.withOpacity(0.13),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: const Text(
@@ -502,7 +474,7 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                       if (skills != 'None')
                         Text(
                           'Skills: $skills',
-                          style: const TextStyle(fontSize: 14),
+                          style: const TextStyle(fontSize: 15),
                         ),
                       const SizedBox(height: 8),
                       Row(
@@ -510,7 +482,7 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                         children: [
                           Row(
                             children: [
-                              const Icon(Icons.star, color: Colors.amber, size: 16),
+                              const Icon(Icons.star, color: Colors.amber, size: 17),
                               const SizedBox(width: 4),
                               Text('${rating.toStringAsFixed(1)} Rating'),
                             ],
@@ -521,7 +493,6 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                                 icon: Icons.edit,
                                 color: Colors.blue,
                                 onTap: () {
-                                  // TODO: Implement user edit functionality
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(content: Text("Edit user feature coming soon")),
                                   );
@@ -532,7 +503,6 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                                 icon: Icons.block,
                                 color: Colors.orange,
                                 onTap: () {
-                                  // TODO: Implement block user functionality
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(content: Text("Block user feature coming soon")),
                                   );
@@ -558,7 +528,7 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
       },
     );
   }
-  
+
   Widget _buildUserActionButton({
     required IconData icon,
     required Color color,
@@ -568,18 +538,17 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
       onTap: onTap,
       borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: const EdgeInsets.all(8),
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withOpacity(0.13),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(icon, color: color, size: 16),
+        child: Icon(icon, color: color, size: 17),
       ),
     );
   }
-  
+
   Widget _buildSkillsTab() {
-    // Extract all skills and count their occurrences
     Map<String, int> skillCounts = {};
     for (final user in _allUsers) {
       final data = user.data() as Map<String, dynamic>;
@@ -588,15 +557,11 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
         skillCounts[skill] = (skillCounts[skill] ?? 0) + 1;
       }
     }
-    
-    // Sort skills by count
     final sortedSkills = skillCounts.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
-    
     if (sortedSkills.isEmpty) {
       return const Center(child: Text("No skills found in the system"));
     }
-    
     return Column(
       children: [
         Padding(
@@ -606,21 +571,24 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
               const Text(
                 'Most Popular Skills',
                 style: TextStyle(
-                  fontSize: 16,
+                  fontSize: 17,
                   fontWeight: FontWeight.bold,
                   color: Color(0xFF6246EA),
                 ),
               ),
               const Spacer(),
               TextButton.icon(
-                icon: const Icon(Icons.add, size: 18),
+                icon: const Icon(Icons.add, size: 19),
                 label: const Text("Add Skill"),
                 onPressed: () => _showAddSkillDialog(),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF6246EA),
+                  textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
             ],
           ),
         ),
-        
         Expanded(
           child: ListView.builder(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -628,20 +596,16 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
             itemBuilder: (context, index) {
               final skill = sortedSkills[index].key;
               final count = sortedSkills[index].value;
-              
               final percentage = (count / _allUsers.length) * 100;
-              
-              // Generate a color based on the skill name
               final hue = (skill.hashCode % 360).toDouble();
               final color = HSLColor.fromAHSL(1.0, hue, 0.6, 0.5).toColor();
-              
               return Card(
-                margin: const EdgeInsets.only(bottom: 12),
+                margin: const EdgeInsets.only(bottom: 13),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(13),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(15),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -680,7 +644,6 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
                           IconButton(
                             icon: const Icon(Icons.edit, color: Colors.blue),
                             onPressed: () {
-                              // TODO: Implement skill edit functionality
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(content: Text("Edit skill feature coming soon")),
                               );
@@ -708,9 +671,8 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
       ],
     );
   }
-  
+
   Widget _buildReportsTab() {
-    // This would typically show user reports, system notifications, etc.
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -745,17 +707,20 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
             label: const Text('Learn More'),
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              backgroundColor: const Color(0xFF6246EA),
+              foregroundColor: Colors.white,
+              textStyle: const TextStyle(fontWeight: FontWeight.bold),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
           ),
         ],
       ),
     );
   }
-  
+
   void _showAddSkillDialog() {
     final TextEditingController skillNameController = TextEditingController();
     final TextEditingController skillDescriptionController = TextEditingController();
-    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -788,10 +753,8 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
           ),
           ElevatedButton(
             onPressed: () {
-              // TODO: Implement adding skill to firestore
               final skillName = skillNameController.text.trim();
               if (skillName.isNotEmpty) {
-                // Add skill to a 'skills' collection in Firestore
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text("Skill '$skillName' added successfully")),
                 );
@@ -799,6 +762,12 @@ class _AdminPageState extends State<AdminPage> with SingleTickerProviderStateMix
               Navigator.pop(context);
             },
             child: const Text('Add Skill'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF6246EA),
+              foregroundColor: Colors.white,
+              textStyle: const TextStyle(fontWeight: FontWeight.bold),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
           ),
         ],
       ),

@@ -282,12 +282,22 @@ class _SwapState extends State<Swap> with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _backgroundColor,
+      backgroundColor: _backgroundColor == Colors.white ? const Color(0xFFF6F6FB) : _backgroundColor,
       appBar: AppBar(
-        title: const Text("Skill Match"),
+        elevation: 2,
+        backgroundColor: Colors.white,
+        title: const Text(
+          "Skill Match",
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF2D2D2D),
+            fontSize: 22,
+            letterSpacing: 0.2,
+          ),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, color: Color(0xFF6246EA)),
             onPressed: _isLoading ? null : _loadUsers,
             tooltip: 'Refresh matches',
           ),
@@ -374,11 +384,10 @@ class _SwapState extends State<Swap> with SingleTickerProviderStateMixin {
     
     return Column(
       children: [
-        const SizedBox(height: 16),
-        
+        const SizedBox(height: 18),
         // Match quality indicator
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 18),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -386,7 +395,8 @@ class _SwapState extends State<Swap> with SingleTickerProviderStateMixin {
                 'Match Quality: ',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Colors.grey[700],
+                  color: Colors.grey[800],
+                  fontSize: 15,
                 ),
               ),
               ...List.generate(5, (index) => Padding(
@@ -394,14 +404,13 @@ class _SwapState extends State<Swap> with SingleTickerProviderStateMixin {
                 child: Icon(
                   index < matchScore ? Icons.star : Icons.star_border,
                   color: Colors.amber,
-                  size: 20,
+                  size: 22,
                 ),
               )),
             ],
           ),
         ),
-        const SizedBox(height: 16),
-        
+        const SizedBox(height: 18),
         // Swipe card
         Expanded(
           child: GestureDetector(
@@ -414,41 +423,43 @@ class _SwapState extends State<Swap> with SingleTickerProviderStateMixin {
                 alignment: Alignment.center,
                 child: Card(
                   key: _cardKey,
-                  elevation: 8,
-                  margin: const EdgeInsets.symmetric(horizontal: 20),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  elevation: 10,
+                  shadowColor: Colors.black12,
+                  margin: const EdgeInsets.symmetric(horizontal: 18),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                   child: Container(
-                    width: MediaQuery.of(context).size.width * 0.85,
-                    height: MediaQuery.of(context).size.height * 0.6,
-                    padding: const EdgeInsets.all(20),
+                    width: MediaQuery.of(context).size.width * 0.87,
+                    height: MediaQuery.of(context).size.height * 0.62,
+                    padding: const EdgeInsets.all(24),
                     child: Column(
                       children: [
                         CachedNetworkImage(
                           imageUrl: user["photoUrl"] ?? '',
                           imageBuilder: (context, imageProvider) => CircleAvatar(
-                            radius: 60,
+                            radius: 64,
                             backgroundImage: imageProvider,
                           ),
                           placeholder: (context, url) => Shimmer.fromColors(
                             baseColor: Colors.grey[300]!,
                             highlightColor: Colors.grey[100]!,
                             child: CircleAvatar(
-                              radius: 60,
+                              radius: 64,
                               backgroundColor: Colors.grey[300],
                             ),
                           ),
                           errorWidget: (context, url, error) => CircleAvatar(
-                            radius: 60,
+                            radius: 64,
                             backgroundColor: Colors.grey[300],
-                            child: const Icon(Icons.person, size: 60, color: Colors.grey),
+                            child: const Icon(Icons.person, size: 64, color: Colors.grey),
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 18),
                         Text(
                           user["name"] ?? 'Anonymous',
                           style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 26,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF2D2D2D),
                           ),
                         ),
                         const SizedBox(height: 8),
@@ -461,7 +472,7 @@ class _SwapState extends State<Swap> with SingleTickerProviderStateMixin {
                               direction: Axis.horizontal,
                               allowHalfRating: true,
                               itemCount: 5,
-                              itemSize: 16,
+                              itemSize: 18,
                               ignoreGestures: true,
                               itemBuilder: (context, _) => const Icon(
                                 Icons.star,
@@ -474,15 +485,14 @@ class _SwapState extends State<Swap> with SingleTickerProviderStateMixin {
                               '($completedSwaps)',
                               style: TextStyle(
                                 color: Colors.grey[600],
-                                fontSize: 12,
+                                fontSize: 13,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 20),
-                        const Divider(),
-                        const SizedBox(height: 20),
-                        
+                        const SizedBox(height: 22),
+                        Divider(height: 1, color: Colors.grey[200]),
+                        const SizedBox(height: 18),
                         // Skills section
                         Expanded(
                           child: SingleChildScrollView(
@@ -490,17 +500,18 @@ class _SwapState extends State<Swap> with SingleTickerProviderStateMixin {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 _buildSkillSection('Skills Offered', skillsOffered, Icons.auto_fix_high, Colors.indigo),
-                                const SizedBox(height: 16),
+                                const SizedBox(height: 18),
                                 _buildSkillSection('Skills Wanted', skillsWanted, Icons.search, Colors.orange[700]!),
-                                const SizedBox(height: 16),
+                                const SizedBox(height: 18),
                                 _buildAvailabilitySection(availability),
                                 if (user['bio'] != null && user['bio'].toString().isNotEmpty) ...[
-                                  const SizedBox(height: 16),
+                                  const SizedBox(height: 18),
                                   const Text(
                                     'About',
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 16,
+                                      fontSize: 17,
+                                      color: Color(0xFF2D2D2D),
                                     ),
                                   ),
                                   const SizedBox(height: 8),
@@ -526,19 +537,17 @@ class _SwapState extends State<Swap> with SingleTickerProviderStateMixin {
             ),
           ),
         ),
-        
         // Swipe hint text
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.symmetric(vertical: 18),
           child: Text(
             'Swipe right to connect, left to pass',
-            style: TextStyle(color: Colors.grey[600]),
+            style: TextStyle(color: Colors.grey[700], fontSize: 15, fontWeight: FontWeight.w500),
           ),
         ),
-        
         // Action buttons
         Padding(
-          padding: const EdgeInsets.only(bottom: 24),
+          padding: const EdgeInsets.only(bottom: 28),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -546,28 +555,28 @@ class _SwapState extends State<Swap> with SingleTickerProviderStateMixin {
                 onPressed: _sendingRequest ? null : _rejectUser,
                 backgroundColor: Colors.white,
                 foregroundColor: Colors.red,
-                elevation: 4,
+                elevation: 5,
                 mini: false,
                 heroTag: 'reject',
-                child: const Icon(Icons.close, size: 32),
+                child: const Icon(Icons.close, size: 34),
               ),
-              const SizedBox(width: 32),
+              const SizedBox(width: 36),
               FloatingActionButton(
                 onPressed: _sendingRequest ? null : _likeUser,
-                backgroundColor: _sendingRequest ? Colors.grey : Colors.indigo,
+                backgroundColor: _sendingRequest ? Colors.grey : const Color(0xFF6246EA),
                 foregroundColor: Colors.white,
-                elevation: 4,
+                elevation: 5,
                 heroTag: 'like',
                 child: _sendingRequest
                     ? const SizedBox(
-                        width: 24,
-                        height: 24,
+                        width: 26,
+                        height: 26,
                         child: CircularProgressIndicator(
                           color: Colors.white,
                           strokeWidth: 2,
                         ),
                       )
-                    : const Icon(Icons.check, size: 32),
+                    : const Icon(Icons.check, size: 34),
               ),
             ],
           ),

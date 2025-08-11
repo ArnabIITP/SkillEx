@@ -133,10 +133,10 @@ class _HomePageState extends State<HomePage> {
     final username = FirebaseAuth.instance.currentUser?.displayName?.split(' ').first ?? '';
     
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: const Color(0xFFF6F6FB),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -144,49 +144,60 @@ class _HomePageState extends State<HomePage> {
               Text(
                 '$greeting${username.isNotEmpty ? ', $username' : ''}! 👋',
                 style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 28,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.5,
+                  color: Color(0xFF2D2D2D),
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               Text(
                 'Find the perfect skill swap match',
-                style: TextStyle(color: Colors.grey[600]),
-              ),
-              const SizedBox(height: 16),
-              
-              // Search bar
-              TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Search skills or users...',
-                  prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                  suffixIcon: searchQuery.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() {
-                              searchQuery = '';
-                            });
-                          },
-                        )
-                      : null,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey[200],
-                  contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                style: TextStyle(
+                  color: Colors.grey[700],
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
                 ),
-                onChanged: (value) {
-                  setState(() {
-                    searchQuery = value;
-                  });
-                },
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 22),
+
+              // Search bar
+              Material(
+                elevation: 2,
+                borderRadius: BorderRadius.circular(30),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search skills or users...',
+                    prefixIcon: const Icon(Icons.search, color: Color(0xFF6246EA)),
+                    suffixIcon: searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() {
+                                searchQuery = '';
+                              });
+                            },
+                          )
+                        : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      borderSide: BorderSide.none,
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                  ),
+                  style: const TextStyle(fontSize: 16),
+                  onChanged: (value) {
+                    setState(() {
+                      searchQuery = value;
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(height: 18),
 
               // Filter button
               Row(
@@ -195,28 +206,29 @@ class _HomePageState extends State<HomePage> {
                     'Filter by skills:',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: Colors.grey[700],
+                      fontSize: 15,
+                      color: Colors.grey[800],
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   ElevatedButton.icon(
-                    icon: const Icon(Icons.filter_list),
+                    icon: const Icon(Icons.filter_list, size: 20),
                     label: Text(selectedCategories.contains('All') ? 'All' : '${selectedCategories.length} selected'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF6246EA),
                       foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                      textStyle: const TextStyle(fontWeight: FontWeight.w600),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(22),
                       ),
                     ),
-                    onPressed: () {
-                      _showFilterDialog();
-                    },
+                    onPressed: _showFilterDialog,
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
 
               // User count or loading indicator
               Padding(
@@ -227,11 +239,12 @@ class _HomePageState extends State<HomePage> {
                         '${filteredUsers.length} users found',
                         style: TextStyle(
                           color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
                         ),
                       ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
 
               // User cards
               Expanded(
@@ -354,13 +367,14 @@ class _HomePageState extends State<HomePage> {
     final completedSwaps = user['completedSwaps'] as int;
 
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      elevation: 2,
+      margin: const EdgeInsets.symmetric(vertical: 10),
+      elevation: 4,
+      shadowColor: Colors.black12,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
       ),
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         onTap: () {
           Navigator.push(
             context,
@@ -370,7 +384,7 @@ class _HomePageState extends State<HomePage> {
           );
         },
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -380,22 +394,21 @@ class _HomePageState extends State<HomePage> {
                   CachedNetworkImage(
                     imageUrl: user['photoUrl'] ?? '',
                     imageBuilder: (context, imageProvider) => CircleAvatar(
-                      radius: 30,
+                      radius: 32,
                       backgroundImage: imageProvider,
                     ),
                     placeholder: (context, url) => CircleAvatar(
-                      radius: 30,
+                      radius: 32,
                       backgroundColor: Colors.grey[300],
-                      child: const Icon(Icons.person, size: 30, color: Colors.grey),
+                      child: const Icon(Icons.person, size: 32, color: Colors.grey),
                     ),
                     errorWidget: (context, url, error) => CircleAvatar(
-                      radius: 30,
+                      radius: 32,
                       backgroundColor: Colors.grey[300],
-                      child: const Icon(Icons.person, size: 30, color: Colors.grey),
+                      child: const Icon(Icons.person, size: 32, color: Colors.grey),
                     ),
                   ),
-                  const SizedBox(width: 16),
-                  
+                  const SizedBox(width: 18),
                   // Name and rating
                   Expanded(
                     child: Column(
@@ -404,8 +417,9 @@ class _HomePageState extends State<HomePage> {
                         Text(
                           user['name'] ?? 'Anonymous',
                           style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 20,
+                            color: Color(0xFF2D2D2D),
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -417,7 +431,7 @@ class _HomePageState extends State<HomePage> {
                               direction: Axis.horizontal,
                               allowHalfRating: true,
                               itemCount: 5,
-                              itemSize: 16,
+                              itemSize: 18,
                               ignoreGestures: true,
                               itemBuilder: (context, _) => const Icon(
                                 Icons.star,
@@ -430,7 +444,7 @@ class _HomePageState extends State<HomePage> {
                               '($completedSwaps)',
                               style: TextStyle(
                                 color: Colors.grey[600],
-                                fontSize: 12,
+                                fontSize: 13,
                               ),
                             ),
                           ],
@@ -440,10 +454,9 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              const Divider(height: 1),
-              const SizedBox(height: 12),
-              
+              const SizedBox(height: 18),
+              Divider(height: 1, color: Colors.grey[200]),
+              const SizedBox(height: 14),
               // Skills section
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -462,22 +475,21 @@ class _HomePageState extends State<HomePage> {
                               style: TextStyle(
                                 color: Colors.indigo,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 12,
+                                fontSize: 13,
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 8),
                         Wrap(
-                          spacing: 4,
-                          runSpacing: 4,
+                          spacing: 6,
+                          runSpacing: 6,
                           children: skillsOffered.map((skill) => _buildSkillChip(skill, true)).toList(),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  
+                  const SizedBox(width: 10),
                   // Skills wanted
                   Expanded(
                     child: Column(
@@ -492,15 +504,15 @@ class _HomePageState extends State<HomePage> {
                               style: TextStyle(
                                 color: Colors.orange,
                                 fontWeight: FontWeight.bold,
-                                fontSize: 12,
+                                fontSize: 13,
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 8),
                         Wrap(
-                          spacing: 4,
-                          runSpacing: 4,
+                          spacing: 6,
+                          runSpacing: 6,
                           children: skillsWanted.map((skill) => _buildSkillChip(skill, false)).toList(),
                         ),
                       ],
@@ -508,8 +520,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
-              
+              const SizedBox(height: 18),
               // Availability
               Row(
                 children: [
@@ -517,7 +528,7 @@ class _HomePageState extends State<HomePage> {
                   const SizedBox(width: 4),
                   Text(
                     'Available: ${availability.join(", ")}',
-                    style: const TextStyle(fontSize: 12),
+                    style: const TextStyle(fontSize: 13, color: Color(0xFF2D2D2D)),
                   ),
                 ],
               ),
@@ -530,19 +541,27 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildSkillChip(String skill, bool isOffered) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: isOffered ? Colors.indigo.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
+        color: isOffered ? const Color(0xFF6246EA).withOpacity(0.12) : Colors.orange.withOpacity(0.13),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isOffered ? Colors.indigo.withOpacity(0.3) : Colors.orange.withOpacity(0.3),
+          color: isOffered ? const Color(0xFF6246EA).withOpacity(0.25) : Colors.orange.withOpacity(0.25),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
       child: Text(
         skill,
         style: TextStyle(
-          fontSize: 12,
-          color: isOffered ? Colors.indigo : Colors.orange[700],
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: isOffered ? const Color(0xFF6246EA) : Colors.orange[800],
         ),
       ),
     );

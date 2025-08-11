@@ -325,10 +325,20 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: const Color(0xFFF6F6FB),
       appBar: AppBar(
-        title: const Text("Complete Your Profile", style: TextStyle(color: Colors.white)),
-        backgroundColor: Colors.indigo,
+        elevation: 2,
+        backgroundColor: Colors.white,
+        title: const Text(
+          "Complete Your Profile",
+          style: TextStyle(
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF2D2D2D),
+            fontSize: 22,
+            letterSpacing: 0.2,
+          ),
+        ),
+        centerTitle: true,
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),
@@ -338,21 +348,25 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 Text(
                   "Let us know more about you",
-                  style: Theme.of(context).textTheme.headlineSmall,
+                  style: const TextStyle(
+                    fontSize: 19,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF6246EA),
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 20),
-
+                const SizedBox(height: 22),
                 // Profile Picture
                 Center(
                   child: Stack(
                     alignment: Alignment.bottomRight,
                     children: [
                       CircleAvatar(
-                        radius: 60,
-                        backgroundColor: Colors.indigo.withOpacity(0.2),
+                        radius: 64,
+                        backgroundColor: const Color(0xFF6246EA).withOpacity(0.13),
                         backgroundImage: _profileImage != null
                             ? FileImage(_profileImage!)
                             : (Provider.of<AppState>(context).currentUser?.photoUrl.isNotEmpty == true
@@ -360,53 +374,57 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                                 : null),
                         child: _profileImage == null && 
                                (Provider.of<AppState>(context).currentUser?.photoUrl.isEmpty ?? true)
-                            ? Icon(Icons.person, size: 60, color: Colors.indigo)
+                            ? const Icon(Icons.person, size: 64, color: Color(0xFF6246EA))
                             : null,
                       ),
                       GestureDetector(
                         onTap: _pickImage,
                         child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.indigo,
+                          padding: const EdgeInsets.all(10),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF6246EA),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
                             Icons.camera_alt,
                             color: Colors.white,
-                            size: 20,
+                            size: 22,
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
-
+                const SizedBox(height: 28),
                 TextFormField(
                   controller: _nameController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Full Name',
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                   ),
                   validator: (val) => val!.isEmpty ? 'Enter your name' : null,
                   onChanged: (val) => name = val,
+                  style: const TextStyle(fontSize: 15),
                 ),
                 const SizedBox(height: 16),
-
                 TextFormField(
                   controller: _bioController,
                   maxLines: 3,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Bio',
-                    border: OutlineInputBorder(),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    filled: true,
+                    fillColor: Colors.white,
                     hintText: 'Tell us about yourself...'
                   ),
                   onChanged: (val) => bio = val,
+                  style: const TextStyle(fontSize: 15),
                 ),
-                const SizedBox(height: 24),
-
-                const Text("Skills You Offer", style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 26),
+                const Text("Skills You Offer", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF6246EA))),
                 const SizedBox(height: 8),
                 skillInput(
                   label: "e.g. Java, Photoshop",
@@ -415,9 +433,8 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                 ),
                 const SizedBox(height: 10),
                 skillChips(skillsOffered),
-
                 const SizedBox(height: 24),
-                const Text("Skills You Want", style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text("Skills You Want", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF6246EA))),
                 const SizedBox(height: 8),
                 skillInput(
                   label: "e.g. Python, Excel",
@@ -426,21 +443,19 @@ class _ProfileSetupPageState extends State<ProfileSetupPage> {
                 ),
                 const SizedBox(height: 10),
                 skillChips(skillsWanted),
-
                 const SizedBox(height: 24),
                 availabilitySelector(),
-                const SizedBox(height: 30),
-
+                const SizedBox(height: 32),
                 isSaving
                     ? const Center(child: CircularProgressIndicator())
                     : ElevatedButton.icon(
                   icon: const Icon(Icons.save, color: Colors.white),
-                  label: const Text("Save Profile", style: TextStyle(fontSize: 16, color: Colors.white)),
+                  label: const Text("Save Profile", style: TextStyle(fontSize: 17, color: Colors.white, fontWeight: FontWeight.w600)),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.indigo,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    backgroundColor: const Color(0xFF6246EA),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                   ),
                   onPressed: saveProfile,

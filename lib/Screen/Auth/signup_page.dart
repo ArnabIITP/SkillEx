@@ -138,39 +138,40 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF6F6FB),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF6246EA), Color(0xFF9370DB)],
+            colors: [Color(0xFF6246EA), Color(0xFFB8B5F8)],
           ),
         ),
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.all(18.0),
               child: FadeTransition(
                 opacity: _fadeAnimation,
                 child: SlideTransition(
                   position: _slideAnimation,
                   child: Card(
-                    elevation: 10.0,
-                    shadowColor: Colors.black26,
+                    elevation: 16.0,
+                    shadowColor: Colors.black12,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24.0),
+                      borderRadius: BorderRadius.circular(28.0),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.all(32.0),
+                      padding: const EdgeInsets.symmetric(horizontal: 30.0, vertical: 36.0),
                       child: Form(
                         key: _formKey,
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(16),
+                              padding: const EdgeInsets.all(18),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF6246EA).withOpacity(0.1),
+                                color: const Color(0xFF6246EA).withOpacity(0.13),
                                 shape: BoxShape.circle,
                               ),
                               child: const Icon(
@@ -179,7 +180,7 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                                 color: Color(0xFF6246EA),
                               ),
                             ),
-                            const SizedBox(height: 24),
+                            const SizedBox(height: 22),
                             Text(
                               'Create Account',
                               style: GoogleFonts.poppins(
@@ -200,7 +201,7 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 32),
+                            const SizedBox(height: 28),
                             TextFormField(
                               controller: _nameController,
                               cursorColor: const Color(0xFF6246EA),
@@ -237,7 +238,7 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                             return null;
                           },
                         ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 18),
                             TextFormField(
                               controller: _emailController,
                               keyboardType: TextInputType.emailAddress,
@@ -278,7 +279,7 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                             return null;
                           },
                         ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 18),
                             TextFormField(
                               controller: _passwordController,
                               obscureText: _obscurePassword,
@@ -329,7 +330,7 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                             return null;
                           },
                         ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 18),
                             TextFormField(
                               controller: _confirmPasswordController,
                               obscureText: _obscureConfirmPassword,
@@ -380,21 +381,26 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                             return null;
                           },
                         ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 18),
                             
                             // Terms and conditions checkbox
                             Row(
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Checkbox(
-                                  value: _agreedToTerms,
-                                  onChanged: (value) {
-                                    setState(() {
-                                      _agreedToTerms = value ?? false;
-                                    });
-                                  },
-                                  activeColor: const Color(0xFF6246EA),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(4),
+                                Transform.scale(
+                                  scale: 1.15,
+                                  child: Checkbox(
+                                    value: _agreedToTerms,
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _agreedToTerms = value ?? false;
+                                      });
+                                    },
+                                    activeColor: const Color(0xFF6246EA),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    side: BorderSide(color: Colors.grey.shade400, width: 1.2),
                                   ),
                                 ),
                                 Expanded(
@@ -402,28 +408,29 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                                     'I agree to the Terms and Conditions and Privacy Policy',
                                     style: TextStyle(
                                       color: Colors.grey.shade700,
-                                      fontSize: 14,
+                                      fontSize: 14.5,
                                     ),
                                   ),
                                 ),
                               ],
                             ),
                             
-                            const SizedBox(height: 30),
+                            const SizedBox(height: 26),
                             
                             // Signup Button
                             SizedBox(
                               width: double.infinity,
-                              height: 56,
+                              height: 54,
                               child: ElevatedButton(
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF6246EA),
                                   foregroundColor: Colors.white,
-                                  elevation: 2,
-                                  shadowColor: const Color(0xFF6246EA).withOpacity(0.4),
+                                  elevation: 0,
+                                  shadowColor: Colors.transparent,
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
+                                    borderRadius: BorderRadius.circular(18),
                                   ),
+                                  textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                                 ),
                                 onPressed: _isLoading ? null : _signUp,
                                 child: _isLoading
@@ -437,11 +444,11 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                                       )
                                     : const Text(
                                         'Create Account',
-                                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                                       ),
                               ),
                             ),
-                            const SizedBox(height: 30),
+                            const SizedBox(height: 26),
                             
                             // Login link
                             Row(
@@ -451,7 +458,7 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                                   'Already have an account?',
                                   style: TextStyle(
                                     color: Colors.grey.shade700,
-                                    fontSize: 14,
+                                    fontSize: 14.5,
                                   ),
                                 ),
                                 TextButton(
@@ -465,14 +472,9 @@ class _SignupPageState extends State<SignupPage> with SingleTickerProviderStateM
                                     foregroundColor: const Color(0xFF6246EA),
                                     padding: const EdgeInsets.only(left: 8),
                                     minimumSize: const Size(0, 30),
+                                    textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                                   ),
-                                  child: const Text(
-                                    'Login',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                    ),
-                                  ),
+                                  child: const Text('Login'),
                                 ),
                               ],
                             ),
