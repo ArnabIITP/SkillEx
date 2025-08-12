@@ -192,6 +192,10 @@ class _SwapState extends State<Swap> with SingleTickerProviderStateMixin {
       _dragY = details.globalPosition.dy - _dragStart.dy;
       _dragRotation =
           _dragX / (MediaQuery.of(context).size.width * 0.8) * 0.2;
+
+      // Determine if the drag is predominantly vertical
+      final isVerticalDrag = _dragY.abs() > _dragX.abs() * 1.5;
+
       final screenWidth = MediaQuery.of(context).size.width;
       final dragPercentageX = _dragX / screenWidth;
       final dragPercentageY = _dragY / MediaQuery.of(context).size.height;
@@ -201,11 +205,12 @@ class _SwapState extends State<Swap> with SingleTickerProviderStateMixin {
           Colors.white, Colors.green.shade100, dragPercentageX.clamp(0.0, 1.0))!;
       final blueColor = Color.lerp(
           Colors.white, Colors.blue.shade100, -dragPercentageY.clamp(-1.0, 0.0))!;
-      if (_dragY.abs() > _dragX.abs() && _dragY < -8) {
+
+      if (isVerticalDrag && _dragY < 0) {
         _backgroundColor = blueColor;
-      } else if (_dragX > 0) {
+      } else if (!isVerticalDrag && _dragX > 0) {
         _backgroundColor = greenColor;
-      } else if (_dragX < 0) {
+      } else if (!isVerticalDrag && _dragX < 0) {
         _backgroundColor = redColor;
       } else {
         _backgroundColor = Colors.white;
@@ -218,15 +223,22 @@ class _SwapState extends State<Swap> with SingleTickerProviderStateMixin {
     final velocity = details.velocity.pixelsPerSecond;
     final cardWidth = MediaQuery.of(context).size.width * 0.7;
     final cardHeight = MediaQuery.of(context).size.height * 0.4;
-    if (_dragX.abs() > cardWidth * 0.4 || velocity.dx.abs() > 800) {
-      _animateCardOut(_dragX > 0);
-      return;
-    }
-    if (_dragY < -cardHeight * 0.2 || velocity.dy < -800) {
+
+    // Stricter check for vertical drag dominance
+    final isVerticalDrag = _dragY.abs() > _dragX.abs() * 1.5;
+
+    // Prioritize vertical swipes
+    if (isVerticalDrag && (_dragY < -cardHeight * 0.2 || velocity.dy < -800)) {
       _animateCardUp();
-      return;
     }
-    _animateCardBack();
+    // Then check for horizontal swipes
+    else if (!isVerticalDrag && (_dragX.abs() > cardWidth * 0.4 || velocity.dx.abs() > 800)) {
+      _animateCardOut(_dragX > 0);
+    }
+    // Otherwise, animate back to center
+    else {
+      _animateCardBack();
+    }
   }
 
   void _animateCardOut(bool isRight) {
@@ -334,18 +346,19 @@ class _SwapState extends State<Swap> with SingleTickerProviderStateMixin {
   }
 
   void _onRewind() {
-    if (_swipedUsers.isNotEmpty && !_isProcessingAction && _currentIndex > 0) {
-      final lastSwipedUser = _swipedUsers.removeLast();
+    if (!_isProcessingAction && _currentIndex > 0) {
+      if (_swipedUsers.isNotEmpty) {
+        _swipedUsers.removeLast();
+      }
       setState(() {
         _currentIndex--;
-        _users.insert(_currentIndex, lastSwipedUser);
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Rewinded to the previous card")),
       );
-    } else if (_swipedUsers.isEmpty) {
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("No cards to rewind")),
+        const SnackBar(content: Text("No more cards to rewind")),
       );
     }
   }
@@ -393,11 +406,12 @@ class _SwapState extends State<Swap> with SingleTickerProviderStateMixin {
         builder: (context, constraints) {
           final screenWidth = constraints.maxWidth;
           final screenHeight = constraints.maxHeight;
+          final isVerticalDrag = _dragY.abs() > _dragX.abs() * 1.5;
 
           // Calculate progress from 0.0 to 1.0 based on how far the card is dragged
-          final likeProgress = (_dragX / (screenWidth * 0.5)).clamp(0.0, 1.0);
-          final dislikeProgress = (-_dragX / (screenWidth * 0.5)).clamp(0.0, 1.0);
-          final favoriteProgress = (-_dragY / (screenHeight * 0.4)).clamp(0.0, 1.0);
+          final likeProgress = !isVerticalDrag ? (_dragX / (screenWidth * 0.5)).clamp(0.0, 1.0) : 0.0;
+          final dislikeProgress = !isVerticalDrag ? (-_dragX / (screenWidth * 0.5)).clamp(0.0, 1.0) : 0.0;
+          final favoriteProgress = isVerticalDrag ? (-_dragY / (screenHeight * 0.4)).clamp(0.0, 1.0) : 0.0;
 
           return _isLoading
               ? _buildLoadingState()
@@ -537,7 +551,6 @@ class _SwapState extends State<Swap> with SingleTickerProviderStateMixin {
     double scale = 1.0,
     double activationProgress = 0.0,
   }) {
-    // Interpolate colors based on the activation progress
     final Color backgroundColor =
     Color.lerp(Colors.white, actionColor, activationProgress)!;
     final Color iconColor =
@@ -549,7 +562,6 @@ class _SwapState extends State<Swap> with SingleTickerProviderStateMixin {
       child: Container(
         width: 64,
         height: 64,
-        // This container is for sizing and shadow
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           boxShadow: [
@@ -561,9 +573,8 @@ class _SwapState extends State<Swap> with SingleTickerProviderStateMixin {
             ),
           ],
         ),
-        // The Material widget handles the color and the ink splash effect
         child: Material(
-          color: backgroundColor, // Set the dynamic color HERE
+          color: backgroundColor,
           shape: const CircleBorder(),
           child: InkWell(
             borderRadius: BorderRadius.circular(32),
@@ -571,7 +582,7 @@ class _SwapState extends State<Swap> with SingleTickerProviderStateMixin {
             child: Center(
               child: Icon(
                 icon,
-                color: iconColor, // Use the dynamic icon color
+                color: iconColor,
                 size: 36,
               ),
             ),
@@ -592,8 +603,9 @@ class _SwapState extends State<Swap> with SingleTickerProviderStateMixin {
     final currentCardTransform = Matrix4.identity()
       ..translate(_dragX, _dragY)
       ..rotateZ(_dragRotation);
-    final showFavoriteOverlay =
-        _dragY.abs() > _dragX.abs() && _dragY < -8;
+
+    final isVerticalDrag = _dragY.abs() > _dragX.abs() * 1.5;
+    final showFavoriteOverlay = isVerticalDrag && _dragY < 0;
 
     Widget card = _buildCardContent(user);
 
@@ -620,8 +632,8 @@ class _SwapState extends State<Swap> with SingleTickerProviderStateMixin {
         child: Stack(
           children: [
             card,
-            if (_dragX > 0) _buildLikeOverlay(),
-            if (_dragX < 0) _buildDislikeOverlay(),
+            if (!isVerticalDrag && _dragX > 0) _buildLikeOverlay(),
+            if (!isVerticalDrag && _dragX < 0) _buildDislikeOverlay(),
             if (showFavoriteOverlay) _buildFavoriteOverlay(),
           ],
         ),
