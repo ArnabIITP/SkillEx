@@ -3,16 +3,23 @@ class Assets {
   Assets._();
 
   static const String adminAdmin = 'lib/Screen/Admin/Admin.dart';
+  static const String authLoginPage = 'lib/Screen/Auth/login_page.dart';
+  static const String authSignupPage = 'lib/Screen/Auth/signup_page.dart';
   static const String generatedAssets = 'lib/generated/assets.dart';
   static const String libMain = 'lib/main.dart';
-  static const String userAdded = 'lib/Screen/User/added.dart';
+  static const String modelsNotificationModel = 'lib/models/notification_model.dart';
+  static const String modelsUserModel = 'lib/models/user_model.dart';
+  static const String providersAppState = 'lib/providers/app_state.dart';
+  static const String providersUserDataProvider = 'lib/providers/user_data_provider.dart';
   static const String userBottomnav = 'lib/Screen/User/Bottomnav.dart';
+  static const String userChatPage = 'lib/Screen/User/chat_page.dart';
   static const String userHome = 'lib/Screen/User/Home.dart';
-  static const String userLogin = 'lib/Screen/User/Login.dart';
+  static const String userNotificationSettings = 'lib/Screen/User/notification_settings.dart';
+  static const String userPrivacySettings = 'lib/Screen/User/privacy_settings.dart';
   static const String userProfile = 'lib/Screen/User/profile.dart';
   static const String userRequest = 'lib/Screen/User/Request.dart';
   static const String userSetup = 'lib/Screen/User/setup.dart';
-  static const String userSignup = 'lib/Screen/User/Signup.dart';
   static const String userSwap = 'lib/Screen/User/Swap.dart';
+  static const String userUserDetail = 'lib/Screen/User/user_detail.dart';
 
 }
