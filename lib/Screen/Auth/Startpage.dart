@@ -117,13 +117,13 @@ class _StarterPageState extends State<StarterPage> {
                         valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFF37335)),
                       )
                           : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.start,
                         children: [
                           SvgPicture.asset(
                             'assets/icons/google.svg', // Ensure this asset exists in your project
                             height: 24.0,
                           ),
-                          const SizedBox(width: 10),
+                          const SizedBox(width: 50),
                           Text(
                             'Continue with Google',
                             style: GoogleFonts.poppins(
