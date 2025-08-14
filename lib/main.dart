@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
+import 'Screen/Auth/Startpage.dart';
 import 'Screen/User/Bottomnav.dart';
 import 'Screen/Auth/login_page.dart';
 import 'providers/app_state.dart';
@@ -100,7 +101,7 @@ class MyApp extends StatelessWidget {
             if (user != null) {
               return const BottomNavPage();
             } else {
-              return const LoginPage();
+              return const StarterPage();
             }
           },
         ),

@@ -5,6 +5,7 @@ class Assets {
   static const String adminAdmin = 'lib/Screen/Admin/Admin.dart';
   static const String authLoginPage = 'lib/Screen/Auth/login_page.dart';
   static const String authSignupPage = 'lib/Screen/Auth/signup_page.dart';
+  static const String authStartpage = 'lib/Screen/Auth/Startpage.dart';
   static const String generatedAssets = 'lib/generated/assets.dart';
   static const String libMain = 'lib/main.dart';
   static const String modelsNotificationModel = 'lib/models/notification_model.dart';
