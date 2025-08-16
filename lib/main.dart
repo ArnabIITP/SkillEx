@@ -4,7 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 import 'Screen/Auth/Startpage.dart';
 import 'Screen/User/Bottomnav.dart';
-import 'Screen/Auth/login_page.dart';
 import 'providers/app_state.dart';
 import 'providers/user_data_provider.dart';
 

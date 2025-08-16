@@ -7,7 +7,12 @@ class Assets {
   static const String authSignupPage = 'lib/Screen/Auth/signup_page.dart';
   static const String authStartpage = 'lib/Screen/Auth/Startpage.dart';
   static const String generatedAssets = 'lib/generated/assets.dart';
+  static const String iconsApple = 'assets/icons/apple.svg';
+  static const String iconsFacebook = 'assets/icons/facebook.svg';
+  static const String iconsGoogle = 'assets/icons/google.svg';
+  static const String iconsLogo = 'assets/icons/logo.png';
   static const String libMain = 'lib/main.dart';
+  static const String libTheme = 'lib/theme.dart';
   static const String modelsNotificationModel = 'lib/models/notification_model.dart';
   static const String modelsUserModel = 'lib/models/user_model.dart';
   static const String providersAppState = 'lib/providers/app_state.dart';
