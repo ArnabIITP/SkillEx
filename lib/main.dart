@@ -6,6 +6,7 @@ import 'Screen/Auth/Startpage.dart';
 import 'Screen/User/Bottomnav.dart';
 import 'providers/app_state.dart';
 import 'providers/user_data_provider.dart';
+import 'features/feature_routes.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -86,6 +87,7 @@ class MyApp extends StatelessWidget {
             suffixIconColor: Colors.grey.shade600,
           ),
         ),
+        routes: featureRoutes,
         home: StreamBuilder<User?>(
           stream: FirebaseAuth.instance.authStateChanges(),
           builder: (context, snapshot) {
